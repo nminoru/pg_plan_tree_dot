@@ -1,0 +1,5 @@
+# pg_plan_tree_dot extension
+comment = 'PostgreSQL extension which visualizes a plan tree using Graphviz'
+default_version = '1.0'
+module_pathname = '$libdir/pg_plan_tree_dot'
+relocatable = false
