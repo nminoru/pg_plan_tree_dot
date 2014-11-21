@@ -1,4 +1,42 @@
 pg_plan_tree_dot
 ================
 
-PostgreSQL extension which visualizes a plan tree using Graphviz
+pg_plan_tree_dot is PostgreSQL extension which visualizes a plan tree using Graphviz.
+
+As you know, the EXPLAIN command displays the execution plan that PostgreSQL's planner/optimizer generates for the supplied statement.
+However the result of this command is rough.
+
+pg_plan_tree_dot allows you to generate a .dot file from the given SQL query, and then you convert the ouput .dot file into the plan tree graph using the "dot" command for Graphviz. 
+
+Requirements
+============
+
+- Install Graphviz
+- Install PostgreSQL 9.x
+
+Tested on:
+
+- PostgreSQL 9.2.8, 9.4 beta3 running on CentOS 6.6 for x86-64
+
+Building
+========
+
+First, acquire the source code by cloning the git repository.
+
+    $ git clone https://github.com/nminoru/pg_plan_tree_dot
+
+Next, input the following commadns.
+
+    $ cd pg_plan_tree_dot
+    $ make
+    $ make install
+
+
+Usage 
+=====
+
+    CREATE EXTENSION pg_plan_tree_dot;
+
+    SELECT generate_plan_tree_dot('sql', 'output.dot');
+
+    dot -Tpng output.dot -o output.png
