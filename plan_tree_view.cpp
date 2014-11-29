@@ -32,24 +32,27 @@ extern "C" {
 
 #include <stdarg.h>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <string>
 
 #include "pg_plan_tree_dot.h"
 
-
 #define FIND_NODE(fldname) \
-	do {findNode(env, node->fldname);} while (0)
+	do {findNode(env, node, #fldname, node->fldname);} while (0)
+
+#define FIND_NODE_INDEX(fldname, index) \
+	do {if (node->fldname[index] != NULL) { findNodeIndex(env, node, #fldname, index, node->fldname);}} while (0)
 
 #define FIND_PLAN(fldname) \
-	do {findNode(env, node->fldname);} while (0)
+	do {findNode(env, node, #fldname, node->fldname);} while (0)
 
 #define FIND_EXPRLIST(fldname) \
-	do {findNode(env, node->fldname);} while (0)
+	do {env.registerExprTree(node->fldname); findNode(env, node, #fldname, node->fldname);} while (0)
 
 #define FIND_TARGETLIST(fldname) \
-	do {findNode(env, node->fldname);} while (0)
+	do {env.registerTargetList(node->fldname); findNode(env, node, #fldname, node->fldname);} while (0)
 
 /* Write an integer field (anything written as ":fldname %d") */
 #define WRITE_INT_FIELD(fldname) \
@@ -115,38 +118,54 @@ extern "C" {
 	do {if (node->fldname[index] != NULL) {env.outputNodeIndex(#fldname, index, node, node->fldname[index]);}} while (0)
 
 
-struct NodeInfo {
-	unsigned int node_id;
-};
-
-
-typedef std::map<const void*, NodeInfo>       NodeInfoMap;
-typedef std::pair<unsigned int, std::string>  EdgeType;
-typedef std::map<EdgeType, unsigned int>      EdgeMap;
-typedef std::pair<unsigned int, unsigned int> ListType;
-typedef std::map<ListType, unsigned int>      ListMap;
-
+typedef std::map<const void*, unsigned int>		NodeIdMap;
+typedef std::pair<const void*, const void*>		EdgeKeyType;
+typedef std::map<EdgeKeyType, std::string>		EdgeMap;
+typedef std::set<const void*>					NodeSet;
+typedef std::map<const void*, const void*>		NodeNodeMap;
+typedef std::map<const void*, NodeSet>			NodeSetMap;
 
 class NodeInfoEnv {
-	NodeInfoMap  node_map;
-	EdgeMap		 edge_map;
-	ListMap		 list_map;
-	unsigned int node_id;
-	std::string  label;
-	std::string  buffer;
+	NodeIdMap		node_id_map;
+	EdgeMap			edge_map;
+
+	unsigned int	node_id;
+	std::string		label;
+	std::string		buffer;
+
+	NodeSet			tlist_head_set;
+	NodeSet			exprtree_head_set;
+	int				num_subgraph;
 
 public:
-	NodeInfoEnv(const char *str) : node_map(), edge_map(), list_map(), node_id(0), label(str), buffer() {}
+	NodeInfoEnv(const char *str) :
+		node_id_map(), edge_map(), node_id(0), label(str), buffer(),
+		tlist_head_set(), exprtree_head_set(), num_subgraph(0) {}
 
 	bool hasNode(const void *node) const
 	{
-		return node_map.find(node) != node_map.end();
+		return node_id_map.find(node) != node_id_map.end();
+	}
+
+	void registerTargetList(const void *node)
+	{
+		tlist_head_set.insert(node);
+	}
+
+	void registerExprTree(const void *node)
+	{
+		exprtree_head_set.insert(node);
 	}
 
 	void registerNode(const void *node)
 	{
 		node_id++;
-		node_map[node].node_id = node_id;
+		node_id_map[node] = node_id;
+	}
+
+	void registerEdge(const void *parent, const void *node, const char *fldname)
+	{
+		edge_map[EdgeKeyType(parent, node)] = fldname;
 	}
 
 	const char *c_str() const
@@ -158,7 +177,7 @@ public:
 
 	void pushNode(const void *node, const char* str)
 	{
-		append("<head> %s (%d)", str, node_map[node].node_id);
+		append("<head> %s (%d)", str, node_id_map[node]);
 	}
 
 	void popNode()
@@ -273,25 +292,15 @@ public:
 
 	void outputNode(const char *fldname, const void *node, const void *edge)
 	{
-		NodeInfoMap::const_iterator self_it = node_map.find(node);
-		NodeInfoMap::const_iterator edge_it = node_map.find(edge);
-
 		if (edge)
 		{
 			append("|<%s> %s: ", fldname, fldname);
 
-			if ((self_it != node_map.end()) && (edge_it != node_map.end()))
-			{
-				/* append("%d", (*edge_it).second.node_id); */
-				edge_map[EdgeType((*self_it).second.node_id, fldname)] = (*edge_it).second.node_id;
-			}
-			else
+			if (!hasNode(node) || !hasNode(edge))
 				append("Unknown node");
 		}
 		else
-		{
 			append("|%s: NULL", fldname);
-		}
 	}
 
 	void outputLocation(const char *fldname, int location)
@@ -870,8 +879,8 @@ public:
 
 
 /* static void _outNode(StringInfo str, const void *obj); */
-static void findNode(NodeInfoEnv& env, const void *obj);
-/* static void findNodeIndex(NodeInfoEnv& env, const void *obj); */
+static void findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *obj);
+static void findNodeIndex(NodeInfoEnv& env, const void *parent, const char *fldname, int index, const void *obj);
 static void findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void findPlan(NodeInfoEnv& env, const Plan *node);
 static void   findModifyTable(NodeInfoEnv& env, const ModifyTable *node);
@@ -1065,7 +1074,7 @@ get_plan_tree_dot_string(const char *title, const void *obj)
 	{
 		NodeInfoEnv env(title);
 
-		findNode(env, obj);
+		findNode(env, NULL, NULL, obj);
 		env.outputAllNodes();
 		
 		buffer = pstrdup(env.c_str());
@@ -1079,12 +1088,11 @@ get_plan_tree_dot_string(const char *title, const void *obj)
 }
 
 
-
 /****************************************************************************/
 /*                                                                          */
 /****************************************************************************/
 static void
-findNode(NodeInfoEnv& env, const void *obj)
+findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *obj)
 {
 	if (obj == NULL)
 		return;
@@ -1093,6 +1101,9 @@ findNode(NodeInfoEnv& env, const void *obj)
 		return;
 
 	env.registerNode(obj);
+
+	if (parent)
+		env.registerEdge(parent, obj, fldname);
 
 	if (IsA(obj, Integer)  ||
 		IsA(obj, Float)    ||
@@ -1106,11 +1117,18 @@ findNode(NodeInfoEnv& env, const void *obj)
 
 	if (IsA(obj, List))
 	{
+		int i = 0;
 		const List *node = reinterpret_cast<const List*>(obj);
 		const ListCell *lc;
 
 		foreach(lc, node)
-			findNode(env, lfirst(lc));
+		{
+			char buffer[256];
+			sprintf(buffer, "%d", i + 1);
+			findNode(env, obj, buffer, lfirst(lc));
+			i++;
+		}
+
 		return;
 	}
 
@@ -1684,6 +1702,14 @@ findNode(NodeInfoEnv& env, const void *obj)
 }
 
 static void
+findNodeIndex(NodeInfoEnv& env, const void *parent, const char *fldname, int index, const void *obj)
+{
+	char buffer[256];
+	sprintf(buffer, "%s%d", fldname, index);
+	findNode(env, parent, fldname, obj);
+}
+
+static void
 findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 {
 	FIND_NODE(planTree);
@@ -1703,7 +1729,7 @@ findPlan(NodeInfoEnv& env, const Plan *node)
 	FIND_EXPRLIST(qual);
 	FIND_PLAN(lefttree);
 	FIND_PLAN(righttree);
-FIND_NODE(initPlan); /* list of plans */
+	FIND_NODE(initPlan); /* list of plans */
 }
 
 static void
@@ -2291,15 +2317,15 @@ findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	FIND_NODE(plan_params);
 
 	for (i=1 ; i<node->simple_rel_array_size; i++)
-		FIND_NODE(simple_rel_array[i]);
+		FIND_NODE_INDEX(simple_rel_array, i);
 
 	for (i=1 ; i<node->simple_rel_array_size; i++)
-		FIND_NODE(simple_rte_array[i]);
+		FIND_NODE_INDEX(simple_rte_array, i);
 
 	FIND_NODE(join_rel_list);
 
 	for (i=0 ; i<node->join_cur_level; i++)
-		FIND_NODE(join_rel_level[i]);
+		FIND_NODE_INDEX(join_rel_level, i);
 
 	FIND_NODE(init_plans);
 	FIND_NODE(cte_plan_ids);
@@ -2421,65 +2447,151 @@ findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 /****************************************************************************/
 void NodeInfoEnv::outputAllNodes()
 {
+	NodeSetMap node_group;
+	NodeNodeMap head_node_map;
+
+	NodeSet::const_iterator head_node_it;
+
+	for (head_node_it = tlist_head_set.begin() ; head_node_it != tlist_head_set.end() ; head_node_it++)
+		head_node_map[*head_node_it] = *head_node_it;
+
+	for (head_node_it = exprtree_head_set.begin() ; head_node_it != exprtree_head_set.end() ; head_node_it++)
+		head_node_map[*head_node_it] = *head_node_it;
+
+	bool changed;
+	do
+	{
+		changed = false;
+
+		EdgeMap::const_reverse_iterator edge_it;
+		for (edge_it = edge_map.rbegin() ; edge_it != edge_map.rend() ; edge_it++)
+		{
+			const void * from = (*edge_it).first.first;
+			const void * to = (*edge_it).first.second;
+
+			if (head_node_map.find(to) != head_node_map.end())
+				continue;
+
+			if (head_node_map.find(from) != head_node_map.end())
+			{
+				head_node_map[to] = head_node_map[from];
+				changed = true;
+			}
+		}
+	}
+	while (changed);
+
+	NodeIdMap::const_iterator node_it;
+	for (node_it = node_id_map.begin() ; node_it != node_id_map.end() ; node_it++)
+	{
+		const void *head = NULL;
+		const void *obj = (*node_it).first;
+
+		if (head_node_map.find(obj) != head_node_map.end())
+			head = head_node_map[obj];
+
+		node_group[head].insert(obj);
+	}
+
+	/*
+	 *
+	 */
 	append("digraph {\n");
 	append("graph [rankdir = \"LR\", label = \"%s\"]\n", label.c_str());
 	append("node  [shape=record,style=filled,fillcolor=gray95]\n");
 	append("edge  [arrowtail=empty]\n");
 
-	NodeInfoMap::iterator node_it;
-	for (node_it = node_map.begin() ; node_it != node_map.end() ; node_it++)
+	NodeSetMap::const_iterator group_it;
+	for (group_it = node_group.begin() ; group_it != node_group.end() ; group_it++)
 	{
-		const void *obj = (*node_it).first;
+		const void *head = (*group_it).first;
+		const NodeSet& node_set = (*group_it).second;
 
-		if (IsA(obj, List))
+		if (head != NULL)
 		{
-			int i = 1;
-			const ListCell *lc;
+			append("subgraph cluster_%d {\n", num_subgraph++);
 
-			append("%d[label = \"<head> List (%d)|", (*node_it).second.node_id, (*node_it).second.node_id);
-
-			foreach(lc, reinterpret_cast<const List *>(obj))
-			{
-				NodeInfoMap::const_iterator self_it = node_map.find(obj);
-				NodeInfoMap::const_iterator edge_it = node_map.find(lfirst(lc));
-
-				if ((self_it != node_map.end()) && (edge_it != node_map.end()))
-				{
-					append("<%d> [%d]", i, i - 1);
-					list_map[ListType((*self_it).second.node_id, i)] = (*edge_it).second.node_id;
-					i++;
-				}
-				else
-					append("Unknown node");
-
-				if (lnext(lc))
-					append("|");
-			}
-
-			append("\"]\n");
+			if (tlist_head_set.find(head) != tlist_head_set.end())
+				append("\tlabel = \"Target List\";\n");
+			else
+				append("\tlabel = \"Express Tree\";\n");
 		}
-		else
+		
+		/*
+		 * Nodes
+		 */
+		NodeSet::const_iterator member_it;
+		for (member_it = node_set.begin() ; member_it != node_set.end() ; member_it++)
 		{
-			append("%d[label = \"", (*node_it).second.node_id);
+			const void *obj = *member_it;
+			unsigned int node_id = node_id_map[obj];
+
+			if (head != NULL)
+				append("\t");
+
+			append("%d[label = \"", node_id);
 			::outputNode(*this, obj);
 			append("\"]\n");
 		}
-	}
 
-	EdgeMap::iterator edge_it;
-	for (edge_it = edge_map.begin() ; edge_it != edge_map.end() ; edge_it++)
-	{
-		append("%d:%s -> %d:head [headlabel = \"%d\", taillabel = \"%d\"]\n",
-			   (*edge_it).first.first, (*edge_it).first.second.c_str(), (*edge_it).second,
-			   (*edge_it).first.first, (*edge_it).second);
-	}
+		append("\n");
+		
+		/*
+		 * Edges
+		 */
+		if (head != NULL)
+		{
+			EdgeMap::const_iterator edge_it;
+			for (edge_it = edge_map.begin() ; edge_it != edge_map.end() ; edge_it++)
+			{
+				const void *from, *to; 
+				unsigned int from_node_id, to_node_id;
 
-	ListMap::iterator list_it;
-	for (list_it = list_map.begin() ; list_it != list_map.end() ; list_it++)
-	{
-		append("%d:%d -> %d:head [headlabel = \"%d\", taillabel = \"%d\"]\n",
-			   (*list_it).first.first, (*list_it).first.second, (*list_it).second,
-			   (*list_it).first.first, (*list_it).second);
+				from = (*edge_it).first.first;
+				to   = (*edge_it).first.second;
+
+				if (head != head_node_map[from] || head != head_node_map[to])
+					continue;
+
+				from_node_id = node_id_map[from];
+				to_node_id   = node_id_map[to];
+
+				append("\t%d:%s -> %d:head [headlabel = \"%d\", taillabel = \"%d\"]\n",
+					   from_node_id, (*edge_it).second.c_str(), to_node_id,
+					   from_node_id, to_node_id);
+			}
+		}
+		else
+		{
+			EdgeMap::const_iterator edge_it;
+			for (edge_it = edge_map.begin() ; edge_it != edge_map.end() ; edge_it++)
+			{
+				const void *from, *to; 
+				const void *from_head, *to_head; 
+				unsigned int from_node_id, to_node_id;
+
+				from = (*edge_it).first.first;
+				to   = (*edge_it).first.second;
+
+				from_head = head_node_map[from];
+				to_head   = head_node_map[to];
+
+				if ((from_head == to_head) && (from_head != NULL))
+					continue;
+
+				from_node_id = node_id_map[from];
+				to_node_id   = node_id_map[to];
+
+				append("%d:%s -> %d:head [headlabel = \"%d\", taillabel = \"%d\"]\n",
+					   from_node_id, (*edge_it).second.c_str(), to_node_id,
+					   from_node_id, to_node_id);
+			}
+		}
+
+		if (head != NULL)
+			append("}\n");
+
+		append("\n");
 	}
 
 	append("}\n");
@@ -2497,6 +2609,23 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		IsA(obj, OidList))
 	{
 		outputValue(env, reinterpret_cast<const Value*>(obj));
+		return;
+	}
+
+	if (IsA(obj, List))
+	{
+		int i = 0;
+		const ListCell *lc;
+
+		env.pushNode(obj, "List");
+
+		foreach(lc, reinterpret_cast<const List *>(obj))
+		{
+			env.append("|<%d> [%d]", i + 1, i);
+			i++;
+		}
+
+		env.popNode();
 		return;
 	}
 
