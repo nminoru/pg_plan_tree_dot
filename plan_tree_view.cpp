@@ -42,8 +42,20 @@ extern "C" {
 #define FIND_NODE(fldname) \
 	do {findNode(env, node->fldname);} while (0)
 
+#define FIND_PLAN(fldname) \
+	do {findNode(env, node->fldname);} while (0)
+
+#define FIND_EXPRLIST(fldname) \
+	do {findNode(env, node->fldname);} while (0)
+
+#define FIND_TARGETLIST(fldname) \
+	do {findNode(env, node->fldname);} while (0)
+
 /* Write an integer field (anything written as ":fldname %d") */
 #define WRITE_INT_FIELD(fldname) \
+	do {env.outputInt(#fldname, node->fldname);} while (0)
+
+#define WRITE_INT32_FIELD(fldname) \
 	do {env.outputInt(#fldname, node->fldname);} while (0)
 
 /* Write an unsigned integer field (anything written as ":fldname %u") */
@@ -652,6 +664,173 @@ public:
 		}
 	}
 
+	void outputEnum(const char *fldname, OnCommitAction onCommit)
+	{
+		append("|%s: ", fldname);
+		switch (onCommit)
+		{
+			case ONCOMMIT_NOOP:
+				append("ONCOMMIT_NOOP");
+				break;
+			case ONCOMMIT_PRESERVE_ROWS:
+				append("ONCOMMIT_PRESERVE_ROWS");
+				break;
+			case ONCOMMIT_DELETE_ROWS:
+				append("ONCOMMIT_DELETE_ROWS");
+				break;
+			case ONCOMMIT_DROP:
+				append("ONCOMMIT_DROP");
+				break;
+			default:
+				append("OnCommitAction(Unknown: %d)", onCommit);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, RowCompareType rctype)
+	{
+		append("|%s: ", fldname);
+		switch (rctype)
+		{
+			case ROWCOMPARE_LT:
+				append("ROWCOMPARE_LT");
+				break;
+			case ROWCOMPARE_LE:
+				append("ROWCOMPARE_LE");
+				break;
+			case ROWCOMPARE_EQ:
+				append("ROWCOMPARE_EQ");
+				break;
+			case ROWCOMPARE_GE:
+				append("ROWCOMPARE_GE");
+				break;
+			case ROWCOMPARE_GT:
+				append("ROWCOMPARE_GT");
+				break;
+			case ROWCOMPARE_NE:
+				append("ROWCOMPARE_NE");
+				break;
+			default:
+				append("RowCompareType(Unknown: %d)", rctype);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, MinMaxOp op)
+	{
+		append("|%s: ", fldname);
+		switch (op)
+		{
+			case IS_GREATEST:
+				append("IS_GREATEST");
+				break;
+			case IS_LEAST:
+				append("IS_LEAST");
+				break;
+			default:
+				append("MinMaxOp(Unknown: %d)", op);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, XmlExprOp op)
+	{
+		append("|%s: ", op);
+		switch (op)
+		{
+			case IS_XMLCONCAT:
+				append("IS_XMLCONCAT");
+				break;
+			case IS_XMLELEMENT:
+				append("IS_XMLELEMENT");
+				break;
+			case IS_XMLFOREST:
+				append("IS_XMLFOREST");
+				break;
+			case IS_XMLPARSE:
+				append("IS_XMLPARSE");
+				break;
+			case IS_XMLPI:
+				append("IS_XMLPI");
+				break;
+			case IS_XMLROOT:
+				append("IS_XMLROOT");
+				break;
+			case IS_XMLSERIALIZE:
+				append("IS_XMLSERIALIZE");
+				break;
+			case IS_DOCUMENT:
+				append("IS_DOCUMENT");
+				break;				
+			default:
+				append("XmlExprOp(Unknown: %d)", op);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, XmlOptionType xmloption)
+	{
+		append("|%s: ", xmloption);
+		switch (xmloption)
+		{
+			case XMLOPTION_DOCUMENT:
+				append("XMLOPTION_DOCUMENT");
+				break;
+			case XMLOPTION_CONTENT:
+				append("XMLOPTION_CONTENT");
+				break;
+			default:
+				append("XmlOptionType(Unknown: %d)", xmloption);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, NullTestType nulltesttype)
+	{
+		append("|%s: ", fldname);
+		switch (nulltesttype)
+		{
+			case IS_NULL:
+				append("IS_NULL");
+				break;
+			case IS_NOT_NULL:
+				append("IS_NOT_NULL");
+				break;
+			default:
+				append("NullTestType(Unknown: %d)", nulltesttype);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, BoolTestType booltesttype)
+	{
+		append("|%s: ", fldname);
+		switch (booltesttype)
+		{
+			case IS_TRUE:
+				append("IS_TRUE");
+				break;
+			case IS_NOT_TRUE:
+				append("IS_NOT_TRUE");
+				break;
+			case IS_FALSE:
+				append("IS_FALSE");
+				break;
+			case IS_NOT_FALSE:
+				append("IS_NOT_FALSE");
+				break;
+			case IS_UNKNOWN:
+				append("IS_UNKNOWN");
+				break;
+			case IS_NOT_UNKNOWN:
+				append("IS_NOT_UNKNOWN");
+				break;
+			default:
+				append("BoolTestType(Unknown: %d)", booltesttype);
+				break;
+		}
+	}
+
 	void outputOidArray(const char *fldname, int size, Oid* oidarray)
 	{
 		int i;
@@ -692,10 +871,13 @@ public:
 
 /* static void _outNode(StringInfo str, const void *obj); */
 static void findNode(NodeInfoEnv& env, const void *obj);
-static void findNodeIndex(NodeInfoEnv& env, const void *obj);
+/* static void findNodeIndex(NodeInfoEnv& env, const void *obj); */
 static void findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void findPlan(NodeInfoEnv& env, const Plan *node);
 static void   findModifyTable(NodeInfoEnv& env, const ModifyTable *node);
+static void   findAppend(NodeInfoEnv& env, const Append *node);
+static void   findMergeAppend(NodeInfoEnv& env, const MergeAppend *node);
+static void   findRecursiveUnion(NodeInfoEnv& env, const RecursiveUnion *node);
 static void   findBitmapAnd(NodeInfoEnv& env, const BitmapAnd *node);
 static void   findBitmapOr(NodeInfoEnv& env, const BitmapOr *node);
 static void   findScan(NodeInfoEnv& env, const Scan *node);
@@ -730,6 +912,7 @@ static void   findPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node);
 static void   findPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node);
 static void   findAlias(NodeInfoEnv& env, const Alias *node);
 static void   findRangeVar(NodeInfoEnv& env, const RangeVar *node);
+static void   findIntoClause(NodeInfoEnv& env, const IntoClause *node);
 /* static void findExpr(NodeInfoEnv& env, const Expr *node); */
 static void   findVar(NodeInfoEnv& env, const Var *node);
 static void   findConst(NodeInfoEnv& env, const Const *node);
@@ -746,11 +929,27 @@ static void   findScalarArrayOpExpr(NodeInfoEnv& env, const ScalarArrayOpExpr *n
 static void   findBoolExpr(NodeInfoEnv& env, const BoolExpr *node);
 static void   findSubLink(NodeInfoEnv& env, const SubLink *node);
 static void   findSubPlan(NodeInfoEnv& env, const SubPlan *node);
+static void   findAlternativeSubPlan(NodeInfoEnv& env, const AlternativeSubPlan *node);
+static void   findFieldSelect(NodeInfoEnv& env, const FieldSelect *node);
+static void   findFieldStore(NodeInfoEnv& env, const FieldStore *node);
 static void   findRelabelType(NodeInfoEnv& env, const RelabelType *node);
+static void   findCoerceViaIO(NodeInfoEnv& env, const CoerceViaIO *node);
+static void   findArrayCoerceExpr(NodeInfoEnv& env, const ArrayCoerceExpr *node);
+static void   findConvertRowtypeExpr(NodeInfoEnv& env, const ConvertRowtypeExpr *node);
+static void   findCollateExpr(NodeInfoEnv& env, const CollateExpr *node);
 static void   findCaseExpr(NodeInfoEnv& env, const CaseExpr *node);
 static void   findCaseWhen(NodeInfoEnv& env, const CaseWhen *node);
 static void   findCaseTestExpr(NodeInfoEnv& env, const CaseTestExpr *node);
 static void   findArrayExpr(NodeInfoEnv& env, const ArrayExpr *node);
+static void   findRowExpr(NodeInfoEnv& env, const RowExpr *node);
+static void   findRowCompareExpr(NodeInfoEnv& env, const RowCompareExpr *node);
+static void   findCoalesceExpr(NodeInfoEnv& env, const CoalesceExpr *node);
+static void   findMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node);
+static void   findXmlExpr(NodeInfoEnv& env, const XmlExpr *node);
+static void   findNullTest(NodeInfoEnv& env, const NullTest *node);
+static void   findBooleanTest(NodeInfoEnv& env, const BooleanTest *node);
+static void   findCoerceToDomain(NodeInfoEnv& env, const CoerceToDomain *node);
+static void   findCoerceToDomainValue(NodeInfoEnv& env, const CoerceToDomainValue *node);
 static void   findSetToDefault(NodeInfoEnv& env, const SetToDefault *node);
 static void   findCurrentOfExpr(NodeInfoEnv& env, const CurrentOfExpr *node);
 static void   findTargetEntry(NodeInfoEnv& env, const TargetEntry *node);
@@ -764,12 +963,14 @@ static void findQuery(NodeInfoEnv& env, const Query *node);
 static void findSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node);
 static void findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node);
 
-
 static void outputNode(NodeInfoEnv& env, const void *obj);
 static void outputValue(NodeInfoEnv& env, const Value *node);
 static void outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void outputPlan(NodeInfoEnv& env, const Plan *node);
 static void   outputModifyTable(NodeInfoEnv& env, const ModifyTable *node);
+static void   outputAppend(NodeInfoEnv& env, const Append *node);
+static void   outputMergeAppend(NodeInfoEnv& env, const MergeAppend *node);
+static void   outputRecursiveUnion(NodeInfoEnv& env, const RecursiveUnion *node);
 static void   outputBitmapAnd(NodeInfoEnv& env, const BitmapAnd *node);
 static void   outputBitmapOr(NodeInfoEnv& env, const BitmapOr *node);
 static void   outputScan(NodeInfoEnv& env, const Scan *node);
@@ -804,6 +1005,7 @@ static void   outputPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node);
 static void   outputPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node);
 static void   outputAlias(NodeInfoEnv& env, const Alias *node);
 static void   outputRangeVar(NodeInfoEnv& env, const RangeVar *node);
+static void   outputIntoClause(NodeInfoEnv& env, const IntoClause *node);
 /* static void outputExpr(NodeInfoEnv& env, const Expr *node); */
 static void   outputVar(NodeInfoEnv& env, const Var *node);
 static void   outputConst(NodeInfoEnv& env, const Const *node);
@@ -820,11 +1022,27 @@ static void   outputScalarArrayOpExpr(NodeInfoEnv& env, const ScalarArrayOpExpr 
 static void   outputBoolExpr(NodeInfoEnv& env, const BoolExpr *node);
 static void   outputSubLink(NodeInfoEnv& env, const SubLink *node);
 static void   outputSubPlan(NodeInfoEnv& env, const SubPlan *node);
+static void   outputAlternativeSubPlan(NodeInfoEnv& env, const AlternativeSubPlan *node);
+static void   outputFieldSelect(NodeInfoEnv& env, const FieldSelect *node);
+static void   outputFieldStore(NodeInfoEnv& env, const FieldStore *node);
 static void   outputRelabelType(NodeInfoEnv& env, const RelabelType *node);
+static void   outputCoerceViaIO(NodeInfoEnv& env, const CoerceViaIO *node);
+static void   outputArrayCoerceExpr(NodeInfoEnv& env, const ArrayCoerceExpr *node);
+static void   outputConvertRowtypeExpr(NodeInfoEnv& env, const ConvertRowtypeExpr *node);
+static void   outputCollateExpr(NodeInfoEnv& env, const CollateExpr *node);
 static void   outputCaseExpr(NodeInfoEnv& env, const CaseExpr *node);
 static void   outputCaseWhen(NodeInfoEnv& env, const CaseWhen *node);
 static void   outputCaseTestExpr(NodeInfoEnv& env, const CaseTestExpr *node);
 static void   outputArrayExpr(NodeInfoEnv& env, const ArrayExpr *node);
+static void   outputRowExpr(NodeInfoEnv& env, const RowExpr *node);
+static void   outputRowCompareExpr(NodeInfoEnv& env, const RowCompareExpr *node);
+static void   outputCoalesceExpr(NodeInfoEnv& env, const CoalesceExpr *node);
+static void   outputMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node);
+static void   outputXmlExpr(NodeInfoEnv& env, const XmlExpr *node);
+static void   outputNullTest(NodeInfoEnv& env, const NullTest *node);
+static void   outputBooleanTest(NodeInfoEnv& env, const BooleanTest *node);
+static void   outputCoerceToDomain(NodeInfoEnv& env, const CoerceToDomain *node);
+static void   outputCoerceToDomainValue(NodeInfoEnv& env, const CoerceToDomainValue *node);
 static void   outputSetToDefault(NodeInfoEnv& env, const SetToDefault *node);
 static void   outputCurrentOfExpr(NodeInfoEnv& env, const CurrentOfExpr *node);
 static void   outputTargetEntry(NodeInfoEnv& env, const TargetEntry *node);
@@ -910,7 +1128,6 @@ findNode(NodeInfoEnv& env, const void *obj)
 		case T_ModifyTable:
 			findModifyTable(env, reinterpret_cast<const ModifyTable*>(obj));
 			break;
-#if 0
 		case T_Append:
 			findAppend(env, reinterpret_cast<const Append*>(obj));
 			break;
@@ -920,7 +1137,6 @@ findNode(NodeInfoEnv& env, const void *obj)
 		case T_RecursiveUnion:
 			findRecursiveUnion(env, reinterpret_cast<const RecursiveUnion*>(obj));
 			break;
-#endif 
 		case T_BitmapAnd:
 			findBitmapAnd(env, reinterpret_cast<const BitmapAnd*>(obj));
 			break;
@@ -1023,11 +1239,9 @@ findNode(NodeInfoEnv& env, const void *obj)
 		case T_RangeVar:
 			findRangeVar(env, reinterpret_cast<const RangeVar*>(obj));
 			break;
-#if 0
 		case T_IntoClause:
-			findIntoClause(env, obj);
+			findIntoClause(env, reinterpret_cast<const IntoClause*>(obj));
 			break;
-#endif
 		case T_Var:
 			findVar(env, reinterpret_cast<const Var*>(obj));
 			break;
@@ -1073,34 +1287,30 @@ findNode(NodeInfoEnv& env, const void *obj)
 		case T_SubPlan:
 			findSubPlan(env, reinterpret_cast<const SubPlan*>(obj));
 			break;
-#if 0
 		case T_AlternativeSubPlan:
-			findAlternativeSubPlan(env, obj);
+			findAlternativeSubPlan(env, reinterpret_cast<const AlternativeSubPlan*>(obj));
 			break;
 		case T_FieldSelect:
-			findFieldSelect(env, obj);
+			findFieldSelect(env, reinterpret_cast<const FieldSelect*>(obj));
 			break;
 		case T_FieldStore:
-			findFieldStore(env, obj);
+			findFieldStore(env, reinterpret_cast<const FieldStore*>(obj));
 			break;
-#endif
 		case T_RelabelType:
 			findRelabelType(env, reinterpret_cast<const RelabelType*>(obj));
 			break;
-#if 0
 		case T_CoerceViaIO:
-			findCoerceViaIO(env, obj);
+			findCoerceViaIO(env, reinterpret_cast<const CoerceViaIO*>(obj));
 			break;
 		case T_ArrayCoerceExpr:
-			findArrayCoerceExpr(env, obj);
+			findArrayCoerceExpr(env, reinterpret_cast<const ArrayCoerceExpr*>(obj));
 			break;
 		case T_ConvertRowtypeExpr:
-			findConvertRowtypeExpr(env, obj);
+			findConvertRowtypeExpr(env, reinterpret_cast<const ConvertRowtypeExpr*>(obj));
 			break;
 		case T_CollateExpr:
-			findCollateExpr(env, obj);
+			findCollateExpr(env, reinterpret_cast<const CollateExpr*>(obj));
 			break;
-#endif
 		case T_CaseExpr:
 			findCaseExpr(env, reinterpret_cast<const CaseExpr*>(obj));
 			break;
@@ -1113,35 +1323,33 @@ findNode(NodeInfoEnv& env, const void *obj)
 		case T_ArrayExpr:
 			findArrayExpr(env, reinterpret_cast<const ArrayExpr*>(obj));
 			break;
-#if 0
 		case T_RowExpr:
-			findRowExpr(env, obj);
+			findRowExpr(env, reinterpret_cast<const RowExpr*>(obj));
 			break;
 		case T_RowCompareExpr:
-			findRowCompareExpr(env, obj);
+			findRowCompareExpr(env, reinterpret_cast<const RowCompareExpr*>(obj));
 			break;
 		case T_CoalesceExpr:
-			findCoalesceExpr(env, obj);
+			findCoalesceExpr(env, reinterpret_cast<const CoalesceExpr*>(obj));
 			break;
 		case T_MinMaxExpr:
-			findMinMaxExpr(env, obj);
+			findMinMaxExpr(env, reinterpret_cast<const MinMaxExpr*>(obj));
 			break;
 		case T_XmlExpr:
-			findXmlExpr(env, obj);
+			findXmlExpr(env, reinterpret_cast<const XmlExpr*>(obj));
 			break;
 		case T_NullTest:
-			findNullTest(env, obj);
+			findNullTest(env, reinterpret_cast<const NullTest*>(obj));
 			break;
 		case T_BooleanTest:
-			findBooleanTest(env, obj);
+			findBooleanTest(env, reinterpret_cast<const BooleanTest*>(obj));
 			break;
 		case T_CoerceToDomain:
-			findCoerceToDomain(env, obj);
+			findCoerceToDomain(env, reinterpret_cast<const CoerceToDomain*>(obj));
 			break;
 		case T_CoerceToDomainValue:
-			findCoerceToDomainValue(env, obj);
+			findCoerceToDomainValue(env, reinterpret_cast<const CoerceToDomainValue*>(obj));
 			break;
-#endif
 		case T_SetToDefault:
 			findSetToDefault(env, reinterpret_cast<const SetToDefault*>(obj));
 			break;
@@ -1491,11 +1699,11 @@ findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 static void
 findPlan(NodeInfoEnv& env, const Plan *node)
 {
-	FIND_NODE(targetlist);
-	FIND_NODE(qual);
-	FIND_NODE(lefttree);
-	FIND_NODE(righttree);
-	FIND_NODE(initPlan);
+	FIND_TARGETLIST(targetlist);
+	FIND_EXPRLIST(qual);
+	FIND_PLAN(lefttree);
+	FIND_PLAN(righttree);
+FIND_NODE(initPlan); /* list of plans */
 }
 
 static void
@@ -1511,17 +1719,37 @@ findModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 }
 
 static void
+findAppend(NodeInfoEnv& env, const Append *node)
+{
+	findPlan(env, &node->plan);
+	FIND_NODE(appendplans);
+}
+
+static void
+findMergeAppend(NodeInfoEnv& env, const MergeAppend *node)
+{
+	findPlan(env, &node->plan);
+	FIND_NODE(mergeplans); /* list of plans */
+}
+
+static void
+findRecursiveUnion(NodeInfoEnv& env, const RecursiveUnion *node)
+{
+	findPlan(env, &node->plan);
+}
+
+static void
 findBitmapAnd(NodeInfoEnv& env, const BitmapAnd *node)
 {
 	findPlan(env, &node->plan);
-	FIND_NODE(bitmapplans);
+	FIND_NODE(bitmapplans); /* list of plans */
 }
 
 static void
 findBitmapOr(NodeInfoEnv& env, const BitmapOr *node)
 {
 	findPlan(env, &node->plan);
-	FIND_NODE(bitmapplans);
+	FIND_NODE(bitmapplans); /* list of plans */
 }
 
 static void
@@ -1540,48 +1768,48 @@ static void
 findIndexScan(NodeInfoEnv& env, const IndexScan *node)
 {
 	findScan(env, &node->scan);
-	FIND_NODE(indexqual);
-	FIND_NODE(indexqualorig);
-	FIND_NODE(indexorderby);
-	FIND_NODE(indexorderbyorig);
+	FIND_EXPRLIST(indexqual);
+	FIND_EXPRLIST(indexqualorig);
+	FIND_EXPRLIST(indexorderby);
+	FIND_EXPRLIST(indexorderbyorig);
 }
 
 static void
 findIndexOnlyScan(NodeInfoEnv& env, const IndexOnlyScan *node)
 {
 	findScan(env, &node->scan);
-	FIND_NODE(indexqual);
-	FIND_NODE(indexorderby);
-	FIND_NODE(indextlist);
+	FIND_EXPRLIST(indexqual);
+	FIND_EXPRLIST(indexorderby);
+	FIND_EXPRLIST(indextlist);
 }
 
 static void
 findBitmapIndexScan(NodeInfoEnv& env, const BitmapIndexScan *node)
 {
 	findScan(env, &node->scan);
-	FIND_NODE(indexqual);
-	FIND_NODE(indexqualorig);
+	FIND_EXPRLIST(indexqual);
+	FIND_EXPRLIST(indexqualorig);
 }
 
 static void
 findBitmapHeapScan(NodeInfoEnv& env, const BitmapHeapScan *node)
 {
 	findScan(env, &node->scan);
-	FIND_NODE(bitmapqualorig);
+	FIND_EXPRLIST(bitmapqualorig);
 }
 
 static void
 findTidScan(NodeInfoEnv& env, const TidScan *node)
 {
 	findScan(env, &node->scan);
-	FIND_NODE(tidquals);
+	FIND_EXPRLIST(tidquals);
 }
 
 static void
 findSubqueryScan(NodeInfoEnv& env, const SubqueryScan *node)
 {
 	findScan(env, &node->scan);
-	FIND_NODE(subplan);
+	FIND_PLAN(subplan);
 }
 
 static void
@@ -1631,28 +1859,28 @@ static void
 findJoin(NodeInfoEnv& env, const Join *node)
 {
 	findPlan(env, &node->plan);
-	FIND_NODE(joinqual);
+	FIND_EXPRLIST(joinqual);
 }
 
 static void
 findNestLoop(NodeInfoEnv& env, const NestLoop *node)
 {
 	findJoin(env, &node->join);
-	FIND_NODE(nestParams);
+	FIND_NODE(nestParams); /* list of NestLoopParam */
 }
 
 static void
 findMergeJoin(NodeInfoEnv& env, const MergeJoin *node)
 {
 	findJoin(env, &node->join);
-	FIND_NODE(mergeclauses);
+	FIND_EXPRLIST(mergeclauses); /* list of OpExr */
 }
 
 static void
 findHashJoin(NodeInfoEnv& env, const HashJoin *node)
 {
 	findJoin(env, &node->join);
-	FIND_NODE(hashclauses);
+	FIND_EXPRLIST(hashclauses);
 }
 
 static void
@@ -1665,8 +1893,8 @@ static void
 findWindowAgg(NodeInfoEnv& env, const WindowAgg *node)
 {
 	findPlan(env, &node->plan);
-	FIND_NODE(startOffset);
-	FIND_NODE(endOffset);
+	FIND_EXPRLIST(startOffset);
+	FIND_EXPRLIST(endOffset);
 }
 
 static void
@@ -1716,8 +1944,8 @@ static void
 findLimit(NodeInfoEnv& env, const Limit *node)
 {
 	findPlan(env, &node->plan);
-	FIND_NODE(limitOffset);
-	FIND_NODE(limitCount);
+	FIND_EXPRLIST(limitOffset);
+	FIND_EXPRLIST(limitCount);
 }
 
 static void
@@ -1742,6 +1970,15 @@ static void
 findAlias(NodeInfoEnv& env, const Alias *node)
 {
 	FIND_NODE(colnames);
+}
+
+static void
+findIntoClause(NodeInfoEnv& env, const IntoClause *node)
+{
+	FIND_NODE(rel);
+	FIND_NODE(colNames);
+	FIND_NODE(options);
+	FIND_NODE(viewQuery);
 }
 
 static void
@@ -1852,7 +2089,51 @@ findSubPlan(NodeInfoEnv& env, const SubPlan *node)
 }
 
 static void
+findAlternativeSubPlan(NodeInfoEnv& env, const AlternativeSubPlan *node)
+{
+	FIND_NODE(subplans); /* list of plans */
+}
+
+static void
+findFieldSelect(NodeInfoEnv& env, const FieldSelect *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findFieldStore(NodeInfoEnv& env, const FieldStore *node)
+{
+	FIND_NODE(arg);
+	FIND_NODE(newvals);
+	FIND_NODE(fieldnums);
+}
+
+static void
 findRelabelType(NodeInfoEnv& env, const RelabelType *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findCoerceViaIO(NodeInfoEnv& env, const CoerceViaIO *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findArrayCoerceExpr(NodeInfoEnv& env, const ArrayCoerceExpr *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findConvertRowtypeExpr(NodeInfoEnv& env, const ConvertRowtypeExpr *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findCollateExpr(NodeInfoEnv& env, const CollateExpr *node)
 {
 	FIND_NODE(arg);
 }
@@ -1882,6 +2163,67 @@ static void
 findArrayExpr(NodeInfoEnv& env, const ArrayExpr *node)
 {
 	FIND_NODE(elements);
+}
+
+static void
+findRowExpr(NodeInfoEnv& env, const RowExpr *node)
+{
+	FIND_NODE(args);
+	FIND_NODE(colnames);
+}
+
+static void
+findRowCompareExpr(NodeInfoEnv& env, const RowCompareExpr *node)
+{
+	FIND_NODE(opnos);
+	FIND_NODE(opfamilies);
+	FIND_NODE(inputcollids);
+	FIND_NODE(largs);
+	FIND_NODE(rargs);
+}
+
+static void
+findCoalesceExpr(NodeInfoEnv& env, const CoalesceExpr *node)
+{
+	FIND_NODE(args);
+}
+
+static void
+findMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node)
+{
+	FIND_NODE(args);
+}
+
+static void
+findXmlExpr(NodeInfoEnv& env, const XmlExpr *node)
+{
+	FIND_NODE(named_args);
+	FIND_NODE(arg_names);
+	FIND_NODE(args);
+}
+
+static void
+findNullTest(NodeInfoEnv& env, const NullTest *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findBooleanTest(NodeInfoEnv& env, const BooleanTest *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findCoerceToDomain(NodeInfoEnv& env, const CoerceToDomain *node)
+{
+	FIND_NODE(arg);
+}
+
+static void
+findCoerceToDomainValue(NodeInfoEnv& env, const CoerceToDomainValue *node)
+{
+	/* nothing */
 }
 
 static void
@@ -2176,7 +2518,6 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_ModifyTable:
 			outputModifyTable(env, reinterpret_cast<const ModifyTable*>(obj));
 			break;
-#if 0
 		case T_Append:
 			outputAppend(env, reinterpret_cast<const Append*>(obj));
 			break;
@@ -2186,7 +2527,6 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_RecursiveUnion:
 			outputRecursiveUnion(env, reinterpret_cast<const RecursiveUnion*>(obj));
 			break;
-#endif 
 		case T_BitmapAnd:
 			outputBitmapAnd(env, reinterpret_cast<const BitmapAnd*>(obj));
 			break;
@@ -2289,11 +2629,9 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_RangeVar:
 			outputRangeVar(env, reinterpret_cast<const RangeVar*>(obj));
 			break;
-#if 0
 		case T_IntoClause:
-			outputIntoClause(env, obj);
+			outputIntoClause(env, reinterpret_cast<const IntoClause*>(obj));
 			break;
-#endif
 		case T_Var:
 			outputVar(env, reinterpret_cast<const Var*>(obj));
 			break;
@@ -2339,34 +2677,30 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_SubPlan:
 			outputSubPlan(env, reinterpret_cast<const SubPlan*>(obj));
 			break;
-#if 0
 		case T_AlternativeSubPlan:
-			outputAlternativeSubPlan(env, obj);
+			outputAlternativeSubPlan(env, reinterpret_cast<const AlternativeSubPlan*>(obj));
 			break;
 		case T_FieldSelect:
-			outputFieldSelect(env, obj);
+			outputFieldSelect(env, reinterpret_cast<const FieldSelect*>(obj));
 			break;
 		case T_FieldStore:
-			outputFieldStore(env, obj);
+			outputFieldStore(env, reinterpret_cast<const FieldStore*>(obj));
 			break;
-#endif
 		case T_RelabelType:
 			outputRelabelType(env, reinterpret_cast<const RelabelType*>(obj));
 			break;
-#if 0
 		case T_CoerceViaIO:
-			outputCoerceViaIO(env, obj);
+			outputCoerceViaIO(env, reinterpret_cast<const CoerceViaIO*>(obj));
 			break;
 		case T_ArrayCoerceExpr:
-			outputArrayCoerceExpr(env, obj);
+			outputArrayCoerceExpr(env, reinterpret_cast<const ArrayCoerceExpr*>(obj));
 			break;
 		case T_ConvertRowtypeExpr:
-			outputConvertRowtypeExpr(env, obj);
+			outputConvertRowtypeExpr(env, reinterpret_cast<const ConvertRowtypeExpr*>(obj));
 			break;
 		case T_CollateExpr:
-			outputCollateExpr(env, obj);
+			outputCollateExpr(env, reinterpret_cast<const CollateExpr*>(obj));
 			break;
-#endif
 		case T_CaseExpr:
 			outputCaseExpr(env, reinterpret_cast<const CaseExpr*>(obj));
 			break;
@@ -2379,35 +2713,33 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_ArrayExpr:
 			outputArrayExpr(env, reinterpret_cast<const ArrayExpr*>(obj));
 			break;
-#if 0
 		case T_RowExpr:
-			outputRowExpr(env, obj);
+			outputRowExpr(env, reinterpret_cast<const RowExpr*>(obj));
 			break;
 		case T_RowCompareExpr:
-			outputRowCompareExpr(env, obj);
+			outputRowCompareExpr(env, reinterpret_cast<const RowCompareExpr*>(obj));
 			break;
 		case T_CoalesceExpr:
-			outputCoalesceExpr(env, obj);
+			outputCoalesceExpr(env, reinterpret_cast<const CoalesceExpr*>(obj));
 			break;
 		case T_MinMaxExpr:
-			outputMinMaxExpr(env, obj);
+			outputMinMaxExpr(env, reinterpret_cast<const MinMaxExpr*>(obj));
 			break;
 		case T_XmlExpr:
-			outputXmlExpr(env, obj);
+			outputXmlExpr(env, reinterpret_cast<const XmlExpr*>(obj));
 			break;
 		case T_NullTest:
-			outputNullTest(env, obj);
+			outputNullTest(env, reinterpret_cast<const NullTest*>(obj));
 			break;
 		case T_BooleanTest:
-			outputBooleanTest(env, obj);
+			outputBooleanTest(env, reinterpret_cast<const BooleanTest*>(obj));
 			break;
 		case T_CoerceToDomain:
-			outputCoerceToDomain(env, obj);
+			outputCoerceToDomain(env, reinterpret_cast<const CoerceToDomain*>(obj));
 			break;
 		case T_CoerceToDomainValue:
-			outputCoerceToDomainValue(env, obj);
+			outputCoerceToDomainValue(env, reinterpret_cast<const CoerceToDomainValue*>(obj));
 			break;
-#endif
 		case T_SetToDefault:
 			outputSetToDefault(env, reinterpret_cast<const SetToDefault*>(obj));
 			break;
@@ -2811,6 +3143,47 @@ outputModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 	WRITE_NODE_FIELD(fdwPrivLists);
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_INT_FIELD(epqParam);
+
+	env.popNode();
+}
+
+static void
+outputAppend(NodeInfoEnv& env, const Append *node)
+{
+	env.pushNode(node, "Append");
+
+	_outputPlan(env, &node->plan);
+	WRITE_NODE_FIELD(appendplans);
+
+	env.popNode();
+}
+
+static void
+outputMergeAppend(NodeInfoEnv& env, const MergeAppend *node)
+{
+	env.pushNode(node, "MergeAppend");
+
+	_outputPlan(env, &node->plan);
+	WRITE_NODE_FIELD(mergeplans);
+	WRITE_INT_FIELD(numCols);
+	env.outputAttrNumberArray("sortColIdx", node->numCols, node->sortColIdx);
+	env.outputOidArray("sortOperators", node->numCols, node->sortOperators);
+	env.outputOidArray("collations", node->numCols, node->collations);
+	env.outputBoolArray("nullsFirst", node->numCols, node->nullsFirst);
+
+	env.popNode();
+}
+
+static void
+outputRecursiveUnion(NodeInfoEnv& env, const RecursiveUnion *node)
+{
+	env.pushNode(node, "RecursiveUnion");
+
+	_outputPlan(env, &node->plan);
+	WRITE_INT_FIELD(numCols);
+	env.outputAttrNumberArray("dupColIdx", node->numCols, node->dupColIdx);
+	env.outputOidArray("dupOperators", node->numCols, node->dupOperators);
+	WRITE_LONG_FIELD(numGroups);
 
 	env.popNode();
 }
@@ -3279,6 +3652,22 @@ outputAlias(NodeInfoEnv& env, const Alias *node)
 }
 
 static void
+outputIntoClause(NodeInfoEnv& env, const IntoClause *node)
+{
+	env.pushNode(node, "IntoClause");
+
+	WRITE_NODE_FIELD(rel);
+	WRITE_NODE_FIELD(colNames);
+	WRITE_NODE_FIELD(options);
+	WRITE_ENUM_FIELD(onCommit, OnCommitAction);
+	WRITE_STRING_FIELD(tableSpaceName);
+	WRITE_NODE_FIELD(viewQuery);
+	WRITE_BOOL_FIELD(skipData);
+
+	env.popNode();
+}
+
+static void
 outputRangeVar(NodeInfoEnv& env, const RangeVar *node)
 {
 	env.pushNode(node, "RangeVar");
@@ -3551,16 +3940,100 @@ outputSubPlan(NodeInfoEnv& env, const SubPlan *node)
 }
 
 static void
+outputAlternativeSubPlan(NodeInfoEnv& env, const AlternativeSubPlan *node)
+{
+	env.pushNode(node, "AlternativeSubPlan");
+
+	WRITE_NODE_FIELD(subplans);
+
+	env.popNode();
+}
+
+static void
+outputFieldSelect(NodeInfoEnv& env, const FieldSelect *node)
+{
+	env.pushNode(node, "FieldSelect");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_ATTRNUMBER_FIELD(fieldnum);
+	WRITE_OID_FIELD(resulttype);
+	WRITE_INT32_FIELD(resulttypmod);
+	WRITE_OID_FIELD(resultcollid);
+
+	env.popNode();
+}
+
+static void
+outputFieldStore(NodeInfoEnv& env, const FieldStore *node)
+{
+	env.pushNode(node, "FieldStore");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_NODE_FIELD(newvals);
+	WRITE_NODE_FIELD(fieldnums);
+	WRITE_OID_FIELD(resulttype);
+	
+	env.popNode();
+}
+
+static void
 outputRelabelType(NodeInfoEnv& env, const RelabelType *node)
 {
 	env.pushNode(node, "RelabelType");
 
 	WRITE_NODE_FIELD(arg);
 	WRITE_OID_FIELD(resulttype);
-	WRITE_INT_FIELD(resulttypmod);
+	WRITE_INT32_FIELD(resulttypmod);
 	WRITE_OID_FIELD(resultcollid);
 	WRITE_ENUM_FIELD(relabelformat, CoercionForm);
 	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputCoerceViaIO(NodeInfoEnv& env, const CoerceViaIO *node)
+{
+	env.pushNode(node, "CoerceViaIO");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_OID_FIELD(resulttype);
+	WRITE_OID_FIELD(resultcollid);
+	WRITE_ENUM_FIELD(coerceformat, CoercionForm);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputArrayCoerceExpr(NodeInfoEnv& env, const ArrayCoerceExpr *node)
+{
+	env.pushNode(node, "ArrayCoerceExpr");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_OID_FIELD(elemfuncid);
+	WRITE_OID_FIELD(resulttype);
+	WRITE_INT32_FIELD(resulttypmod);
+	WRITE_OID_FIELD(resultcollid);
+	WRITE_BOOL_FIELD(isExplicit);
+	WRITE_ENUM_FIELD(coerceformat, CoercionForm);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputConvertRowtypeExpr(NodeInfoEnv& env, const ConvertRowtypeExpr *node)
+{
+	env.pushNode(node, "ConvertRowtypeExpr");
+
+	env.popNode();
+}
+
+static void
+outputCollateExpr(NodeInfoEnv& env, const CollateExpr *node)
+{
+	env.pushNode(node, "CollateExpr");
 
 	env.popNode();
 }
@@ -3614,6 +4087,132 @@ outputArrayExpr(NodeInfoEnv& env, const ArrayExpr *node)
 	WRITE_OID_FIELD(element_typeid);
 	WRITE_NODE_FIELD(elements);
 	WRITE_BOOL_FIELD(multidims);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputRowExpr(NodeInfoEnv& env, const RowExpr *node)
+{
+	env.pushNode(node, "RowExpr");
+
+	WRITE_NODE_FIELD(args);
+	WRITE_OID_FIELD(row_typeid);
+	WRITE_ENUM_FIELD(row_format, CoercionForm);
+	WRITE_NODE_FIELD(colnames);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputRowCompareExpr(NodeInfoEnv& env, const RowCompareExpr *node)
+{
+	env.pushNode(node, "RowCompareExpr");
+
+	WRITE_ENUM_FIELD(rctype, RowCompareType);
+	WRITE_NODE_FIELD(opnos);
+	WRITE_NODE_FIELD(opfamilies);
+	WRITE_NODE_FIELD(inputcollids);
+	WRITE_NODE_FIELD(largs);
+	WRITE_NODE_FIELD(rargs);
+
+	env.popNode();
+}
+
+static void
+outputCoalesceExpr(NodeInfoEnv& env, const CoalesceExpr *node)
+{
+	env.pushNode(node, "CoalesceExpr");
+
+	WRITE_OID_FIELD(coalescetype);
+	WRITE_OID_FIELD(coalescecollid);
+	WRITE_NODE_FIELD(args);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node)
+{
+	env.pushNode(node, "MinMaxExpr");
+
+	WRITE_OID_FIELD(minmaxtype);
+	WRITE_OID_FIELD(minmaxcollid);
+	WRITE_OID_FIELD(inputcollid);
+	WRITE_ENUM_FIELD(op, MinMaxOp);
+	WRITE_NODE_FIELD(args);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputXmlExpr(NodeInfoEnv& env, const XmlExpr *node)
+{
+	env.pushNode(node, "XmlExpr");
+
+	WRITE_ENUM_FIELD(op, XmlExprOp);
+	WRITE_STRING_FIELD(name);
+	WRITE_NODE_FIELD(named_args);
+	WRITE_NODE_FIELD(arg_names);
+	WRITE_NODE_FIELD(args);
+	WRITE_ENUM_FIELD(xmloption, XmlOptionType);
+	WRITE_OID_FIELD(type);
+	WRITE_INT32_FIELD(typmod);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputNullTest(NodeInfoEnv& env, const NullTest *node)
+{
+	env.pushNode(node, "NullTest");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_ENUM_FIELD(nulltesttype, NullTestType);
+	WRITE_BOOL_FIELD(argisrow);
+
+	env.popNode();
+}
+
+static void
+outputBooleanTest(NodeInfoEnv& env, const BooleanTest *node)
+{
+	env.pushNode(node, "BooleanTest");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_ENUM_FIELD(booltesttype, BoolTestType);
+
+	env.popNode();
+}
+
+static void
+outputCoerceToDomain(NodeInfoEnv& env, const CoerceToDomain *node)
+{
+	env.pushNode(node, "CoerceToDomain");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_OID_FIELD(resulttype);
+	WRITE_INT32_FIELD(resulttypmod);
+	WRITE_OID_FIELD(resultcollid);
+	WRITE_ENUM_FIELD(coercionformat, CoercionForm);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+
+static void
+outputCoerceToDomainValue(NodeInfoEnv& env, const CoerceToDomainValue *node)
+{
+	env.pushNode(node, "CoerceToDomainValue");
+
+	WRITE_OID_FIELD(typeId);
+	WRITE_INT32_FIELD(typeMod);
+	WRITE_OID_FIELD(collation);
 	WRITE_LOCATION_FIELD(location);
 
 	env.popNode();
