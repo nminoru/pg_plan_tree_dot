@@ -1,7 +1,7 @@
 pg_plan_tree_dot
 ================
 
-pg_plan_tree_dot is PostgreSQL extension which visualizes a plan tree using Graphviz.
+pg_plan_tree_dot is a PostgreSQL extension which visualizes a plan tree using Graphviz.
 
 As you know, the EXPLAIN command displays the execution plan that PostgreSQL's planner/optimizer generates for the supplied statement.
 However the result of this command is rough.
@@ -16,7 +16,7 @@ Requirements
 
 Tested on:
 
-- PostgreSQL 9.2.8, 9.4 beta3 running on CentOS 6.6 for x86-64
+- PostgreSQL 9.0.18, 9.1.14, 9.2.9, 9.3.5 and 9.4rc1 under x86-64 CentOS 6.6
 
 Building
 ========
@@ -30,7 +30,6 @@ Next, input the following commadns.
     $ cd pg_plan_tree_dot
     $ make
     $ make install
-
 
 Usage 
 =====
