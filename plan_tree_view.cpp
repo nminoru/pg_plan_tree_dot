@@ -2467,15 +2467,16 @@ findRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 	FIND_NODE(subplan);
 
 #if PG_VERSION_NUM >= 90300
-	FIND_NODE(subrtable);
-	FIND_NODE(subrowmark);
-#elif PG_VERSION_NUM >= 90200
 	FIND_NODE(subroot);
-#endif
-
-#if PG_VERSION_NUM >= 90300
 	FIND_NODE(subplan_params);
 #elif PG_VERSION_NUM >= 90200
+	FIND_NODE(subroot);
+#else
+	FIND_NODE(subrtable);
+	FIND_NODE(subrowmark);
+#endif
+
+#if PG_VERSION_NUM >= 90200
 	FIND_NODE(fdwroutine);
 #endif
 
@@ -4864,13 +4865,17 @@ outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 	WRITE_NODE_FIELD(subplan);
 
 #if PG_VERSION_NUM >= 90300
+	WRITE_NODE_FIELD(subroot);
 	WRITE_NODE_FIELD(subplan_params);
 #elif PG_VERSION_NUM >= 90200
 	WRITE_NODE_FIELD(subroot);
-	WRITE_NODE_FIELD(fdwroutine);
-#elif PG_VERSION_NUM >= 90200
+#else
 	WRITE_NODE_FIELD(subrtable);
 	WRITE_NODE_FIELD(subrowmark);
+#endif
+
+#if PG_VERSION_NUM >= 90200
+	WRITE_NODE_FIELD(fdwroutine);
 #endif
 
 #if 0
