@@ -1,0 +1,55 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: SELECT * FROM screen WHERE bgcolor = 'black';"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+15[label = "<head> Alias (15)|aliasname: screen|<colnames> colnames: "]
+17[label = "<head> String (17)|forecolor"]
+16[label = "<head> List (16)|<1> [0]|<2> [1]"]
+18[label = "<head> String (18)|bgcolor"]
+2[label = "<head> SeqScan (2)|startup_cost: 0.00|total_cost: 36.75|plan_rows: 11|plan_width: 8|<targetlist> targetlist: |<qual> qual: |extParam: (b)|allParam: (b)|scanrelid: 1"]
+14[label = "<head> RangeTblEntry(RTE) (14)|<eref> eref: |rtekind: RTE_RELATION|relid: 16415|relkind: 114|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10)|modifiedCols: (b)"]
+13[label = "<head> List (13)|<1> [0]"]
+19[label = "<head> OidList (19)|16415 "]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 0"]
+
+15:colnames -> 16:head [headlabel = "15", taillabel = "16"]
+16:1 -> 17:head [headlabel = "16", taillabel = "17"]
+16:2 -> 18:head [headlabel = "16", taillabel = "18"]
+2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
+2:qual -> 8:head [headlabel = "2", taillabel = "8"]
+14:eref -> 15:head [headlabel = "14", taillabel = "15"]
+13:1 -> 14:head [headlabel = "13", taillabel = "14"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 13:head [headlabel = "1", taillabel = "13"]
+1:relationOids -> 19:head [headlabel = "1", taillabel = "19"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: forecolor|resorigtbl: 16415|resorigcol: 1|resjunk: false"]
+	5[label = "<head> Var (5)|varno: 1|varattno: 1|vartype: 16404|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 7"]
+	3[label = "<head> List (3)|<1> [0]|<2> [1]"]
+	6[label = "<head> TargetEntry (6)|<expr> expr: |resno: 2|resname: bgcolor|resorigtbl: 16415|resorigcol: 2|resjunk: false"]
+	7[label = "<head> Var (7)|varno: 1|varattno: 2|vartype: 16404|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 7"]
+
+	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
+	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
+	3:2 -> 6:head [headlabel = "3", taillabel = "6"]
+	6:expr -> 7:head [headlabel = "6", taillabel = "7"]
+}
+
+subgraph cluster_1 {
+	label = "Express Tree";
+	11[label = "<head> Var (11)|varno: 1|varattno: 2|vartype: 16404|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 27"]
+	10[label = "<head> List (10)|<1> [0]|<2> [1]"]
+	12[label = "<head> Const (12)|consttype: 16404|consttypmod: -1|constlen: 4|constbyval: true|constisnull: false|location: 37"]
+	9[label = "<head> OpExpr (9)|opno: 3516|opfuncid: 3508|opresulttype: 16|opretset: false|<args> args: |location: 35"]
+	8[label = "<head> List (8)|<1> [0]"]
+
+	10:1 -> 11:head [headlabel = "10", taillabel = "11"]
+	10:2 -> 12:head [headlabel = "10", taillabel = "12"]
+	9:args -> 10:head [headlabel = "9", taillabel = "10"]
+	8:1 -> 9:head [headlabel = "8", taillabel = "9"]
+}
+
+}
+
