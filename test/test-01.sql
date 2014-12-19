@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pg_plan_tree_dot;
+
 CREATE TABLE employee (
        ID         int PRIMARY KEY,
        name       varchar(10),
