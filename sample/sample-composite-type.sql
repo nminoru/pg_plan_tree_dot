@@ -1,5 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS pg_plan_tree_dot;
 
+DROP TYPE IF EXISTS xypoint;
+DROP TABLE IF EXISTS triangle;
+
 CREATE TYPE xypoint AS (
        x int,
        y int);
@@ -17,4 +20,3 @@ SELECT generate_plan_tree_dot('SELECT * FROM triangle WHERE (t1).x >= 0;', 'samp
 
 DROP TABLE triangle;
 DROP TYPE xypoint;
-
