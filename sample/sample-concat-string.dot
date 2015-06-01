@@ -1,0 +1,46 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: SELECT id1 || id2 FROM test"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+13[label = "<head> Alias (13)|aliasname: test|<colnames> colnames: "]
+15[label = "<head> String (15)|id1"]
+14[label = "<head> List (14)|<1> [0]|<2> [1]"]
+16[label = "<head> String (16)|id2"]
+2[label = "<head> SeqScan (2)|startup_cost: 0.00|total_cost: 31.52|plan_rows: 1230|plan_width: 36|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 1"]
+12[label = "<head> RangeTblEntry(RTE) (12)|<eref> eref: |rtekind: RTE_RELATION|relid: 16388|relkind: 114|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10)|modifiedCols: (b)"]
+11[label = "<head> List (11)|<1> [0]"]
+17[label = "<head> OidList (17)|16388 "]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 0"]
+
+13:colnames -> 14:head [headlabel = "13", taillabel = "14"]
+14:1 -> 15:head [headlabel = "14", taillabel = "15"]
+14:2 -> 16:head [headlabel = "14", taillabel = "16"]
+2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
+12:eref -> 13:head [headlabel = "12", taillabel = "13"]
+11:1 -> 12:head [headlabel = "11", taillabel = "12"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 11:head [headlabel = "1", taillabel = "11"]
+1:relationOids -> 17:head [headlabel = "1", taillabel = "17"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: ?column?|resjunk: false"]
+	3[label = "<head> List (3)|<1> [0]"]
+	8[label = "<head> Var (8)|varno: 1|varattno: 1|vartype: 1043|vartypmod: -1|varcollid: 100|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 7"]
+	7[label = "<head> RelabelType (7)|<arg> arg: |resulttype: 25|resulttypmod: -1|resultcollid: 100|relabelformat: COERCE_IMPLICIT_CAST"]
+	6[label = "<head> List (6)|<1> [0]|<2> [1]"]
+	10[label = "<head> Var (10)|varno: 1|varattno: 2|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 14"]
+	9[label = "<head> CoerceViaIO (9)|<arg> arg: |resulttype: 25|resultcollid: 100|coerceformat: COERCE_EXPLICIT_CAST|location: 15"]
+	5[label = "<head> OpExpr (5)|opno: 654|opfuncid: 1258|opresulttype: 25|opretset: false|opcollid: 100|inputcollid: 100|<args> args: |location: 10"]
+
+	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
+	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
+	7:arg -> 8:head [headlabel = "7", taillabel = "8"]
+	6:1 -> 7:head [headlabel = "6", taillabel = "7"]
+	6:2 -> 9:head [headlabel = "6", taillabel = "9"]
+	9:arg -> 10:head [headlabel = "9", taillabel = "10"]
+	5:args -> 6:head [headlabel = "5", taillabel = "6"]
+}
+
+}
+

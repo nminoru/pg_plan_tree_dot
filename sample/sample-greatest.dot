@@ -1,0 +1,54 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: SELECT greatest(id1, id2, id3, id4, id5) FROM test"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+14[label = "<head> Alias (14)|aliasname: test|<colnames> colnames: "]
+16[label = "<head> String (16)|id1"]
+15[label = "<head> List (15)|<1> [0]|<2> [1]|<3> [2]|<4> [3]|<5> [4]"]
+17[label = "<head> String (17)|id2"]
+18[label = "<head> String (18)|id3"]
+19[label = "<head> String (19)|id4"]
+20[label = "<head> String (20)|id5"]
+13[label = "<head> RangeTblEntry(RTE) (13)|<eref> eref: |rtekind: RTE_RELATION|relid: 16403|relkind: 114|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10 11 12 13)|modifiedCols: (b)"]
+2[label = "<head> SeqScan (2)|startup_cost: 0.00|total_cost: 26.30|plan_rows: 1630|plan_width: 20|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 1"]
+12[label = "<head> List (12)|<1> [0]"]
+21[label = "<head> OidList (21)|16403 "]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 0"]
+
+14:colnames -> 15:head [headlabel = "14", taillabel = "15"]
+15:1 -> 16:head [headlabel = "15", taillabel = "16"]
+15:2 -> 17:head [headlabel = "15", taillabel = "17"]
+15:3 -> 18:head [headlabel = "15", taillabel = "18"]
+15:4 -> 19:head [headlabel = "15", taillabel = "19"]
+15:5 -> 20:head [headlabel = "15", taillabel = "20"]
+13:eref -> 14:head [headlabel = "13", taillabel = "14"]
+2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
+12:1 -> 13:head [headlabel = "12", taillabel = "13"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 12:head [headlabel = "1", taillabel = "12"]
+1:relationOids -> 21:head [headlabel = "1", taillabel = "21"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: greatest|resjunk: false"]
+	5[label = "<head> MinMaxExpr (5)|minmaxtype: 23|op: IS_GREATEST|<args> args: |location: 7"]
+	7[label = "<head> Var (7)|varno: 1|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 16"]
+	6[label = "<head> List (6)|<1> [0]|<2> [1]|<3> [2]|<4> [3]|<5> [4]"]
+	8[label = "<head> Var (8)|varno: 1|varattno: 2|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 21"]
+	9[label = "<head> Var (9)|varno: 1|varattno: 3|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 3|location: 26"]
+	10[label = "<head> Var (10)|varno: 1|varattno: 4|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 4|location: 31"]
+	11[label = "<head> Var (11)|varno: 1|varattno: 5|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 5|location: 36"]
+	3[label = "<head> List (3)|<1> [0]"]
+
+	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
+	5:args -> 6:head [headlabel = "5", taillabel = "6"]
+	6:1 -> 7:head [headlabel = "6", taillabel = "7"]
+	6:2 -> 8:head [headlabel = "6", taillabel = "8"]
+	6:3 -> 9:head [headlabel = "6", taillabel = "9"]
+	6:4 -> 10:head [headlabel = "6", taillabel = "10"]
+	6:5 -> 11:head [headlabel = "6", taillabel = "11"]
+	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
+}
+
+}
+

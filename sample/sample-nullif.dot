@@ -1,0 +1,42 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: SELECT NULLIF(id1, id2) FROM test"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+11[label = "<head> Alias (11)|aliasname: test|<colnames> colnames: "]
+13[label = "<head> String (13)|id1"]
+12[label = "<head> List (12)|<1> [0]|<2> [1]"]
+14[label = "<head> String (14)|id2"]
+10[label = "<head> RangeTblEntry(RTE) (10)|<eref> eref: |rtekind: RTE_RELATION|relid: 16406|relkind: 114|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10)|modifiedCols: (b)"]
+2[label = "<head> SeqScan (2)|startup_cost: 0.00|total_cost: 36.75|plan_rows: 2140|plan_width: 8|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 1"]
+9[label = "<head> List (9)|<1> [0]"]
+15[label = "<head> OidList (15)|16406 "]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 0"]
+
+11:colnames -> 12:head [headlabel = "11", taillabel = "12"]
+12:1 -> 13:head [headlabel = "12", taillabel = "13"]
+12:2 -> 14:head [headlabel = "12", taillabel = "14"]
+10:eref -> 11:head [headlabel = "10", taillabel = "11"]
+2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
+9:1 -> 10:head [headlabel = "9", taillabel = "10"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 9:head [headlabel = "1", taillabel = "9"]
+1:relationOids -> 15:head [headlabel = "1", taillabel = "15"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: nullif|resjunk: false"]
+	5[label = "<head> NullIfExpr (5)|opno: 96|opfuncid: 65|opresulttype: 23|opretset: false|<args> args: |location: 7"]
+	7[label = "<head> Var (7)|varno: 1|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 14"]
+	6[label = "<head> List (6)|<1> [0]|<2> [1]"]
+	8[label = "<head> Var (8)|varno: 1|varattno: 2|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 19"]
+	3[label = "<head> List (3)|<1> [0]"]
+
+	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
+	5:args -> 6:head [headlabel = "5", taillabel = "6"]
+	6:1 -> 7:head [headlabel = "6", taillabel = "7"]
+	6:2 -> 8:head [headlabel = "6", taillabel = "8"]
+	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
+}
+
+}
+
