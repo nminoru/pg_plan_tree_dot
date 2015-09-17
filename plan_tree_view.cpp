@@ -971,6 +971,7 @@ static void findNode(NodeInfoEnv& env, const void *parent, const char *fldname, 
 static void findNodeIndex(NodeInfoEnv& env, const void *parent, const char *fldname, int index, const void *obj);
 static void findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void findPlan(NodeInfoEnv& env, const Plan *node);
+static void   findResult(NodeInfoEnv& env, const Result *node);
 static void   findModifyTable(NodeInfoEnv& env, const ModifyTable *node);
 static void   findAppend(NodeInfoEnv& env, const Append *node);
 #if PG_VERSION_NUM >= 90100
@@ -1077,6 +1078,7 @@ static void outputNode(NodeInfoEnv& env, const void *obj);
 static void outputValue(NodeInfoEnv& env, const Value *node);
 static void outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void outputPlan(NodeInfoEnv& env, const Plan *node);
+static void   outputResult(NodeInfoEnv& env, const Result *node);
 static void   outputModifyTable(NodeInfoEnv& env, const ModifyTable *node);
 static void   outputAppend(NodeInfoEnv& env, const Append *node);
 #if PG_VERSION_NUM >= 90100
@@ -1250,6 +1252,10 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 	{
 		case T_Plan:
 			findPlan(env, reinterpret_cast<const Plan*>(obj));
+			break;
+
+		case T_Result:
+			findResult(env, reinterpret_cast<const Result*>(obj));
 			break;
 
 #if 0
@@ -1772,6 +1778,13 @@ findPlan(NodeInfoEnv& env, const Plan *node)
 	FIND_PLAN(lefttree);
 	FIND_PLAN(righttree);
 	FIND_NODE(initPlan); /* list of plans */
+}
+
+static void
+findResult(NodeInfoEnv& env, const Result *node)
+{
+	findPlan(env, &node->plan);
+	FIND_NODE(resconstantqual);
 }
 
 static void
@@ -2763,6 +2776,10 @@ outputNode(NodeInfoEnv& env, const void *obj)
 			outputPlan(env, reinterpret_cast<const Plan*>(obj));
 			break;
 
+		case T_Result:
+			outputResult(env, reinterpret_cast<const Result*>(obj));
+			break;
+
 #if 0
 		case T_Env:
 			outputEnv(env, reinterpret_cast<const Env*>(obj));
@@ -3404,6 +3421,17 @@ outputPlan(NodeInfoEnv& env, const Plan *node)
 	env.pushNode(node, "Plan");
 
 	_outputPlan(env, node);
+
+	env.popNode();
+}
+
+static void
+outputResult(NodeInfoEnv& env, const Result *node)
+{
+	env.pushNode(node, "Result");
+
+	_outputPlan(env, &node->plan);
+	WRITE_NODE_FIELD(resconstantqual);
 
 	env.popNode();
 }
