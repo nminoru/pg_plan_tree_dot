@@ -1,0 +1,75 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: UPDATE test SET value = value + 1 WHERE key = 3;"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+24[label = "<head> Alias (24)|aliasname: test|<colnames> colnames: "]
+26[label = "<head> String (26)|key"]
+25[label = "<head> List (25)|<1> [0]|<2> [1]"]
+27[label = "<head> String (27)|value"]
+2[label = "<head> ModifyTable (2)|startup_cost: 0.00|total_cost: 36.78|plan_rows: 11|plan_width: 14|extParam: (b)|allParam: (b)|operation: CMD_UPDATE|<resultRelations> resultRelations: |resultRelIndex: 0|<plans> plans: |<fdwPrivLists> fdwPrivLists: |epqParam: 0"]
+5[label = "<head> SeqScan (5)|startup_cost: 0.00|total_cost: 36.78|plan_rows: 11|plan_width: 14|<targetlist> targetlist: |<qual> qual: |extParam: (b 0)|allParam: (b 0)|scanrelid: 1"]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_UPDATE|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |<resultRelations> resultRelations: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 1"]
+4[label = "<head> List (4)|<1> [0]"]
+3[label = "<head> IntList (3)|1 "]
+21[label = "<head> List (21)|<1> [0]"]
+23[label = "<head> RangeTblEntry(RTE) (23)|<eref> eref: |rtekind: RTE_RELATION|relid: 17245|relkind: 114|inh: false|inFromCl: false|requiredPerms: 6|selectedCols: (b 9 10)|modifiedCols: (b 10)"]
+22[label = "<head> List (22)|<1> [0]"]
+29[label = "<head> OidList (29)|17245 "]
+28[label = "<head> IntList (28)|1 "]
+
+24:colnames -> 25:head [headlabel = "24", taillabel = "25"]
+25:1 -> 26:head [headlabel = "25", taillabel = "26"]
+25:2 -> 27:head [headlabel = "25", taillabel = "27"]
+2:plans -> 4:head [headlabel = "2", taillabel = "4"]
+2:resultRelations -> 3:head [headlabel = "2", taillabel = "3"]
+2:fdwPrivLists -> 21:head [headlabel = "2", taillabel = "21"]
+5:targetlist -> 6:head [headlabel = "5", taillabel = "6"]
+5:qual -> 16:head [headlabel = "5", taillabel = "16"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 22:head [headlabel = "1", taillabel = "22"]
+1:relationOids -> 29:head [headlabel = "1", taillabel = "29"]
+1:resultRelations -> 28:head [headlabel = "1", taillabel = "28"]
+4:1 -> 5:head [headlabel = "4", taillabel = "5"]
+23:eref -> 24:head [headlabel = "23", taillabel = "24"]
+22:1 -> 23:head [headlabel = "22", taillabel = "23"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	9[label = "<head> TargetEntry (9)|<expr> expr: |resno: 2|resname: value|resjunk: false"]
+	12[label = "<head> Var (12)|varno: 1|varattno: 2|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 24"]
+	11[label = "<head> List (11)|<1> [0]|<2> [1]"]
+	13[label = "<head> Const (13)|consttype: 23|consttypmod: -1|constlen: 4|constbyval: true|constisnull: false|location: 32"]
+	10[label = "<head> OpExpr (10)|opno: 551|opfuncid: 177|opresulttype: 23|opretset: false|<args> args: |location: 30"]
+	15[label = "<head> Var (15)|varno: 1|varattno: -1|vartype: 27|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: -1"]
+	8[label = "<head> Var (8)|varno: 1|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1"]
+	7[label = "<head> TargetEntry (7)|<expr> expr: |resno: 1|resname: key|resjunk: false"]
+	6[label = "<head> List (6)|<1> [0]|<2> [1]|<3> [2]"]
+	14[label = "<head> TargetEntry (14)|<expr> expr: |resno: 3|resname: ctid|resjunk: true"]
+
+	9:expr -> 10:head [headlabel = "9", taillabel = "10"]
+	11:1 -> 12:head [headlabel = "11", taillabel = "12"]
+	11:2 -> 13:head [headlabel = "11", taillabel = "13"]
+	10:args -> 11:head [headlabel = "10", taillabel = "11"]
+	7:expr -> 8:head [headlabel = "7", taillabel = "8"]
+	6:2 -> 9:head [headlabel = "6", taillabel = "9"]
+	6:1 -> 7:head [headlabel = "6", taillabel = "7"]
+	6:3 -> 14:head [headlabel = "6", taillabel = "14"]
+	14:expr -> 15:head [headlabel = "14", taillabel = "15"]
+}
+
+subgraph cluster_1 {
+	label = "Express Tree";
+	18[label = "<head> List (18)|<1> [0]|<2> [1]"]
+	19[label = "<head> Var (19)|varno: 1|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 40"]
+	20[label = "<head> Const (20)|consttype: 23|consttypmod: -1|constlen: 4|constbyval: true|constisnull: false|location: 46"]
+	17[label = "<head> OpExpr (17)|opno: 96|opfuncid: 65|opresulttype: 16|opretset: false|<args> args: |location: 44"]
+	16[label = "<head> List (16)|<1> [0]"]
+
+	18:1 -> 19:head [headlabel = "18", taillabel = "19"]
+	18:2 -> 20:head [headlabel = "18", taillabel = "20"]
+	17:args -> 18:head [headlabel = "17", taillabel = "18"]
+	16:1 -> 17:head [headlabel = "16", taillabel = "17"]
+}
+
+}
+
