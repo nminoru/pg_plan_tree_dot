@@ -1,0 +1,127 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: SELECT * FROM test1 UNION SELECT * FROM test2;"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+21[label = "<head> SeqScan (21)|startup_cost: 0.00|total_cost: 15406.00|plan_rows: 1000000|plan_width: 10|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 4"]
+41[label = "<head> Alias (41)|aliasname: test1|<colnames> colnames: "]
+43[label = "<head> String (43)|aggkey"]
+42[label = "<head> List (42)|<1> [0]|<2> [1]"]
+44[label = "<head> String (44)|value"]
+29[label = "<head> Alias (29)|aliasname: *SELECT* 1"]
+30[label = "<head> Alias (30)|aliasname: *SELECT* 1|<colnames> colnames: "]
+32[label = "<head> String (32)|aggkey"]
+31[label = "<head> List (31)|<1> [0]|<2> [1]"]
+33[label = "<head> String (33)|value"]
+46[label = "<head> Alias (46)|aliasname: test2|<colnames> colnames: "]
+48[label = "<head> String (48)|aggkey"]
+47[label = "<head> List (47)|<1> [0]|<2> [1]"]
+49[label = "<head> String (49)|value"]
+35[label = "<head> Alias (35)|aliasname: *SELECT* 2"]
+36[label = "<head> Alias (36)|aliasname: *SELECT* 2|<colnames> colnames: "]
+38[label = "<head> String (38)|aggkey"]
+37[label = "<head> List (37)|<1> [0]|<2> [1]"]
+39[label = "<head> String (39)|value"]
+15[label = "<head> SeqScan (15)|startup_cost: 0.00|total_cost: 15406.00|plan_rows: 1000000|plan_width: 10|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 3"]
+28[label = "<head> RangeTblEntry(RTE) (28)|<alias> alias: |<eref> eref: |rtekind: RTE_SUBQUERY|security_barrier: false|inh: false|inFromCl: false|requiredPerms: 0|selectedCols: (b)|modifiedCols: (b)"]
+34[label = "<head> RangeTblEntry(RTE) (34)|<alias> alias: |<eref> eref: |rtekind: RTE_SUBQUERY|security_barrier: false|inh: false|inFromCl: false|requiredPerms: 0|selectedCols: (b)|modifiedCols: (b)"]
+14[label = "<head> List (14)|<1> [0]|<2> [1]"]
+8[label = "<head> Append (8)|startup_cost: 0.00|total_cost: 50812.00|plan_rows: 2000000|plan_width: 10|<targetlist> targetlist: |extParam: (b)|allParam: (b)|<appendplans> appendplans: "]
+2[label = "<head> Agg (2)|startup_cost: 60812.00|total_cost: 80812.00|plan_rows: 2000000|plan_width: 10|<targetlist> targetlist: |<lefttree> lefttree: |extParam: (b)|allParam: (b)|aggstrategy: AGG_HASHED|numCols: 2|grpColIdx: 1 2|grpOperators: 96 1752|numGroups: "]
+27[label = "<head> List (27)|<1> [0]|<2> [1]|<3> [2]|<4> [3]"]
+40[label = "<head> RangeTblEntry(RTE) (40)|<eref> eref: |rtekind: RTE_RELATION|relid: 17446|relkind: 114|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10)|modifiedCols: (b)"]
+50[label = "<head> OidList (50)|17446 17449 "]
+45[label = "<head> RangeTblEntry(RTE) (45)|<eref> eref: |rtekind: RTE_RELATION|relid: 17449|relkind: 114|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10)|modifiedCols: (b)"]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 0"]
+
+21:targetlist -> 22:head [headlabel = "21", taillabel = "22"]
+41:colnames -> 42:head [headlabel = "41", taillabel = "42"]
+42:1 -> 43:head [headlabel = "42", taillabel = "43"]
+42:2 -> 44:head [headlabel = "42", taillabel = "44"]
+30:colnames -> 31:head [headlabel = "30", taillabel = "31"]
+31:1 -> 32:head [headlabel = "31", taillabel = "32"]
+31:2 -> 33:head [headlabel = "31", taillabel = "33"]
+46:colnames -> 47:head [headlabel = "46", taillabel = "47"]
+47:1 -> 48:head [headlabel = "47", taillabel = "48"]
+47:2 -> 49:head [headlabel = "47", taillabel = "49"]
+36:colnames -> 37:head [headlabel = "36", taillabel = "37"]
+37:1 -> 38:head [headlabel = "37", taillabel = "38"]
+37:2 -> 39:head [headlabel = "37", taillabel = "39"]
+15:targetlist -> 16:head [headlabel = "15", taillabel = "16"]
+28:alias -> 29:head [headlabel = "28", taillabel = "29"]
+28:eref -> 30:head [headlabel = "28", taillabel = "30"]
+34:alias -> 35:head [headlabel = "34", taillabel = "35"]
+34:eref -> 36:head [headlabel = "34", taillabel = "36"]
+14:2 -> 21:head [headlabel = "14", taillabel = "21"]
+14:1 -> 15:head [headlabel = "14", taillabel = "15"]
+8:appendplans -> 14:head [headlabel = "8", taillabel = "14"]
+8:targetlist -> 9:head [headlabel = "8", taillabel = "9"]
+2:lefttree -> 8:head [headlabel = "2", taillabel = "8"]
+2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
+27:1 -> 28:head [headlabel = "27", taillabel = "28"]
+27:2 -> 34:head [headlabel = "27", taillabel = "34"]
+27:3 -> 40:head [headlabel = "27", taillabel = "40"]
+27:4 -> 45:head [headlabel = "27", taillabel = "45"]
+40:eref -> 41:head [headlabel = "40", taillabel = "41"]
+45:eref -> 46:head [headlabel = "45", taillabel = "46"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 27:head [headlabel = "1", taillabel = "27"]
+1:relationOids -> 50:head [headlabel = "1", taillabel = "50"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	9[label = "<head> List (9)|<1> [0]|<2> [1]"]
+	11[label = "<head> Var (11)|varno: OUTER_VAR|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 0|varoattno: 1"]
+	10[label = "<head> TargetEntry (10)|<expr> expr: |resno: 1|resname: aggkey|ressortgroupref: 1|resjunk: false"]
+	13[label = "<head> Var (13)|varno: OUTER_VAR|varattno: 2|vartype: 1700|vartypmod: 786438|varlevelsup: 0|varnoold: 0|varoattno: 2"]
+	12[label = "<head> TargetEntry (12)|<expr> expr: |resno: 2|resname: value|ressortgroupref: 2|resjunk: false"]
+
+	9:1 -> 10:head [headlabel = "9", taillabel = "10"]
+	9:2 -> 12:head [headlabel = "9", taillabel = "12"]
+	10:expr -> 11:head [headlabel = "10", taillabel = "11"]
+	12:expr -> 13:head [headlabel = "12", taillabel = "13"]
+}
+
+subgraph cluster_1 {
+	label = "Target List";
+	5[label = "<head> Var (5)|varno: OUTER_VAR|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 0|varoattno: 1"]
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: aggkey|ressortgroupref: 1|resjunk: false"]
+	3[label = "<head> List (3)|<1> [0]|<2> [1]"]
+	7[label = "<head> Var (7)|varno: OUTER_VAR|varattno: 2|vartype: 1700|vartypmod: 786438|varlevelsup: 0|varnoold: 0|varoattno: 2"]
+	6[label = "<head> TargetEntry (6)|<expr> expr: |resno: 2|resname: value|ressortgroupref: 2|resjunk: false"]
+
+	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
+	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
+	3:2 -> 6:head [headlabel = "3", taillabel = "6"]
+	6:expr -> 7:head [headlabel = "6", taillabel = "7"]
+}
+
+subgraph cluster_2 {
+	label = "Target List";
+	17[label = "<head> TargetEntry (17)|<expr> expr: |resno: 1|resname: aggkey|resjunk: false"]
+	18[label = "<head> Var (18)|varno: 3|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 3|varoattno: 1|location: 7"]
+	16[label = "<head> List (16)|<1> [0]|<2> [1]"]
+	19[label = "<head> TargetEntry (19)|<expr> expr: |resno: 2|resname: value|resjunk: false"]
+	20[label = "<head> Var (20)|varno: 3|varattno: 2|vartype: 1700|vartypmod: 786438|varlevelsup: 0|varnoold: 3|varoattno: 2|location: 7"]
+
+	17:expr -> 18:head [headlabel = "17", taillabel = "18"]
+	16:1 -> 17:head [headlabel = "16", taillabel = "17"]
+	16:2 -> 19:head [headlabel = "16", taillabel = "19"]
+	19:expr -> 20:head [headlabel = "19", taillabel = "20"]
+}
+
+subgraph cluster_3 {
+	label = "Target List";
+	23[label = "<head> TargetEntry (23)|<expr> expr: |resno: 1|resname: aggkey|resjunk: false"]
+	24[label = "<head> Var (24)|varno: 4|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 4|varoattno: 1|location: 33"]
+	22[label = "<head> List (22)|<1> [0]|<2> [1]"]
+	25[label = "<head> TargetEntry (25)|<expr> expr: |resno: 2|resname: value|resjunk: false"]
+	26[label = "<head> Var (26)|varno: 4|varattno: 2|vartype: 1700|vartypmod: 786438|varlevelsup: 0|varnoold: 4|varoattno: 2|location: 33"]
+
+	23:expr -> 24:head [headlabel = "23", taillabel = "24"]
+	22:1 -> 23:head [headlabel = "22", taillabel = "23"]
+	22:2 -> 25:head [headlabel = "22", taillabel = "25"]
+	25:expr -> 26:head [headlabel = "25", taillabel = "26"]
+}
+
+}
+
