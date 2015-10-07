@@ -27,10 +27,11 @@ extern "C" {
 #include "optimizer/restrictinfo.h"
 #include "optimizer/planner.h"
 #include "utils/palloc.h"
-#if PG_VERSION_NUM >= 90500
-#include "utils/lockwaitpolicy.h"
-#endif
 
+#if PG_VERSION_NUM >= 90500
+#include "nodes/parsenodes.h"
+#include "nodes/lockoptions.h"
+#endif
 };
 
 #include <stdarg.h>
@@ -548,6 +549,11 @@ public:
 			case PARAM_SUBLINK:
 				append("PARAM_SUBLINK");
 				break;
+#if PG_VERSION_NUM >= 90500
+			case PARAM_MULTIEXPR:
+				append("PARAM_MULTIEXPR");
+				break;
+#endif
 			default:
 				append("ParamKind(Unknown: %d)", paramkind);
 				break;
@@ -877,6 +883,32 @@ public:
 	}
 
 #if PG_VERSION_NUM >= 90500
+	void outputEnum(const char *fldname, LockClauseStrength lockClauseStrength)
+	{
+		append("|%s: ", fldname);
+		switch (lockClauseStrength)
+		{
+			case LCS_NONE:
+				append("LCS_NONE");
+				break;
+			case LCS_FORKEYSHARE:
+				append("LCS_FORKEYSHARE");
+				break;
+			case LCS_FORSHARE:
+				append("LCS_FORSHARE");
+				break;
+			case LCS_FORNOKEYUPDATE:
+				append("LCS_FORNOKEYUPDATE");
+				break;
+			case LCS_FORUPDATE:
+				append("LCS_FORUPDATE");
+				break;
+			default:
+				append("LockClauseStrength(Unknown: %d)", lockClauseStrength);
+				break;
+		}
+	}
+
 	void outputEnum(const char *fldname, LockWaitPolicy waitPolicy)
 	{
 		append("|%s: ", fldname);
@@ -893,6 +925,52 @@ public:
 				break;
 			default:
 				append("LockWaitPolicy(Unknown: %d)", waitPolicy);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, OnConflictAction onConflictAction)
+	{
+		append("|%s: ", fldname);
+		switch (onConflictAction)
+		{
+			case ONCONFLICT_NONE:
+				append("ONCONFLICT_NONE");
+				break;
+			case ONCONFLICT_NOTHING:
+				append("ONCONFLICT_NOTHING");
+				break;
+			case ONCONFLICT_UPDATE:
+				append("ONCONFLICT_UPDATE");
+				break;
+			default:
+				append("OnConflictAction(Unknown: %d)", onConflictAction);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, GroupingSetKind kind)
+	{
+		append("|%s: ", fldname);
+		switch (kind)
+		{
+			case GROUPING_SET_EMPTY:
+				append("GROUPING_SET_EMPTY");
+				break;
+			case GROUPING_SET_SIMPLE:
+				append("GROUPING_SET_SIMPLE");
+				break;
+			case GROUPING_SET_ROLLUP:
+				append("GROUPING_SET_ROLLUP");
+				break;
+			case GROUPING_SET_CUBE:
+				append("GROUPING_SET_CUBE");
+				break;
+			case GROUPING_SET_SETS:
+				append("GROUPING_SET_SETS");
+				break;
+			default:
+				append("GroupingSetKind(Unknown: %d)", kind);
 				break;
 		}
 	}
@@ -982,6 +1060,9 @@ static void   findBitmapAnd(NodeInfoEnv& env, const BitmapAnd *node);
 static void   findBitmapOr(NodeInfoEnv& env, const BitmapOr *node);
 static void   findScan(NodeInfoEnv& env, const Scan *node);
 static void     findSeqScan(NodeInfoEnv& env, const SeqScan *node);
+#if PG_VERSION_NUM >= 90500
+static void     findSampleScan(NodeInfoEnv& env, const SampleScan *node);
+#endif
 static void     findIndexScan(NodeInfoEnv& env, const IndexScan *node);
 #if PG_VERSION_NUM >= 90200
 static void     findIndexOnlyScan(NodeInfoEnv& env, const IndexOnlyScan *node);
@@ -1027,6 +1108,9 @@ static void   findVar(NodeInfoEnv& env, const Var *node);
 static void   findConst(NodeInfoEnv& env, const Const *node);
 static void   findParam(NodeInfoEnv& env, const Param *node);
 static void   findAggref(NodeInfoEnv& env, const Aggref *node);
+#if PG_VERSION_NUM >= 90500
+static void   findGroupingFunc(NodeInfoEnv& env, const GroupingFunc *node);
+#endif
 static void   findWindowFunc(NodeInfoEnv& env, const WindowFunc *node);
 static void   findArrayRef(NodeInfoEnv& env, const ArrayRef *node);
 static void   findFuncExpr(NodeInfoEnv& env, const FuncExpr *node);
@@ -1067,13 +1151,22 @@ static void   findTargetEntry(NodeInfoEnv& env, const TargetEntry *node);
 static void   findRangeTblRef(NodeInfoEnv& env, const RangeTblRef *node);
 static void   findJoinExpr(NodeInfoEnv& env, const JoinExpr *node);
 static void   findFromExpr(NodeInfoEnv& env, const FromExpr *node);
+#if PG_VERSION_NUM >= 90500
+static void   findOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node);
+#endif
 static void findPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node);
 static void findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
 static void findRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node);
 static void findQuery(NodeInfoEnv& env, const Query *node);
-static void findSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node);
-static void findWindowClause(NodeInfoEnv& env, const WindowClause *node);
 static void findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node);
+#if PG_VERSION_NUM >= 90500
+static void findTableSampleClause(NodeInfoEnv& env, const TableSampleClause *node);
+#endif
+static void findSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node);
+#if PG_VERSION_NUM >= 90500
+static void findGroupingSet(NodeInfoEnv& env, const GroupingSet *node);
+#endif
+static void findWindowClause(NodeInfoEnv& env, const WindowClause *node);
 
 static void outputNode(NodeInfoEnv& env, const void *obj);
 static void outputValue(NodeInfoEnv& env, const Value *node);
@@ -1090,6 +1183,9 @@ static void   outputBitmapAnd(NodeInfoEnv& env, const BitmapAnd *node);
 static void   outputBitmapOr(NodeInfoEnv& env, const BitmapOr *node);
 static void   outputScan(NodeInfoEnv& env, const Scan *node);
 static void     outputSeqScan(NodeInfoEnv& env, const SeqScan *node);
+#if PG_VERSION_NUM >= 90500
+static void     outputSampleScan(NodeInfoEnv& env, const SampleScan *node);
+#endif
 static void     outputIndexScan(NodeInfoEnv& env, const IndexScan *node);
 #if PG_VERSION_NUM >= 90200
 static void     outputIndexOnlyScan(NodeInfoEnv& env, const IndexOnlyScan *node);
@@ -1135,6 +1231,9 @@ static void   outputVar(NodeInfoEnv& env, const Var *node);
 static void   outputConst(NodeInfoEnv& env, const Const *node);
 static void   outputParam(NodeInfoEnv& env, const Param *node);
 static void   outputAggref(NodeInfoEnv& env, const Aggref *node);
+#if PG_VERSION_NUM >= 90500
+static void   outputGroupingFunc(NodeInfoEnv& env, const GroupingFunc *node);
+#endif
 static void   outputWindowFunc(NodeInfoEnv& env, const WindowFunc *node);
 static void   outputArrayRef(NodeInfoEnv& env, const ArrayRef *node);
 static void   outputFuncExpr(NodeInfoEnv& env, const FuncExpr *node);
@@ -1175,13 +1274,22 @@ static void   outputTargetEntry(NodeInfoEnv& env, const TargetEntry *node);
 static void   outputRangeTblRef(NodeInfoEnv& env, const RangeTblRef *node);
 static void   outputJoinExpr(NodeInfoEnv& env, const JoinExpr *node);
 static void   outputFromExpr(NodeInfoEnv& env, const FromExpr *node);
+#if PG_VERSION_NUM >= 90500
+static void   outputOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node);
+#endif
 static void outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node);
 static void outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
 static void outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node);
 static void outputQuery(NodeInfoEnv& env, const Query *node);
-static void outputSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node);
-static void outputWindowClause(NodeInfoEnv& env, const WindowClause *node);
 static void outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node);
+#if PG_VERSION_NUM >= 90500
+static void outputTableSampleClause(NodeInfoEnv& env, const TableSampleClause *node);
+#endif
+static void outputSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node);
+#if PG_VERSION_NUM >= 90500
+static void outputGroupingSet(NodeInfoEnv& env, const GroupingSet *node);
+#endif
+static void outputWindowClause(NodeInfoEnv& env, const WindowClause *node);
 
 char *
 get_plan_tree_dot_string(const char *title, const void *obj)
@@ -1291,6 +1399,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_SeqScan:
 			findSeqScan(env, reinterpret_cast<const SeqScan*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+        case T_SampleScan:
+			findSampleScan(env, reinterpret_cast<const SampleScan*>(obj));
+			break;
+#endif
 		case T_IndexScan:
 			findIndexScan(env, reinterpret_cast<const IndexScan*>(obj));
 			break;
@@ -1407,6 +1520,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_Aggref:
 			findAggref(env, reinterpret_cast<const Aggref*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_GroupingFunc:
+			findGroupingFunc(env, reinterpret_cast<const GroupingFunc*>(obj));
+			break;
+#endif
 		case T_WindowFunc:
 			findWindowFunc(env, reinterpret_cast<const WindowFunc*>(obj));
 			break;
@@ -1523,6 +1641,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_FromExpr:
 			findFromExpr(env, reinterpret_cast<const FromExpr*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_OnConflictExpr:
+			findOnConflictExpr(env, reinterpret_cast<const OnConflictExpr*>(obj));
+			break;
+#endif
 #if 0
 		case T_Path:
 			findPath(env, obj);
@@ -1651,9 +1774,23 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 			findIndexElem(env, obj);
 			break;
 #endif
+
+		case T_RangeTblEntry:
+			findRangeTblEntry(env, reinterpret_cast<const RangeTblEntry*>(obj));
+			break;
+#if PG_VERSION_NUM >= 90500
+		case T_TableSampleClause: 
+			findTableSampleClause(env, reinterpret_cast<const TableSampleClause*>(obj));
+			break;
+#endif
 		case T_SortGroupClause:
 			findSortGroupClause(env, reinterpret_cast<const SortGroupClause*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_GroupingSet:
+			findGroupingSet(env, reinterpret_cast<const GroupingSet*>(obj));
+			break;
+#endif
 		case T_WindowClause:
 			findWindowClause(env, reinterpret_cast<const WindowClause*>(obj));
 			break;
@@ -1671,9 +1808,6 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 			findSetOperationStmt(env, obj);
 			break;
 #endif
-		case T_RangeTblEntry:
-			findRangeTblEntry(env, reinterpret_cast<const RangeTblEntry*>(obj));
-			break;
 #if 0
 		case T_A_Expr:
 			findAExpr(env, obj);
@@ -1803,6 +1937,12 @@ findModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 	FIND_NODE(fdwPrivLists);
 #endif
 	FIND_NODE(rowMarks);
+#if PG_VERSION_NUM >= 90500
+	FIND_NODE(arbiterIndexes);
+	FIND_NODE(onConflictSet);
+	FIND_EXPRLIST(onConflictWhere);
+	FIND_EXPRLIST(exclRelTlist);
+#endif
 }
 
 static void
@@ -1852,6 +1992,15 @@ findSeqScan(NodeInfoEnv& env, const SeqScan *node)
 {
 	findPlan(env, &node->plan);
 }
+
+#if PG_VERSION_NUM >= 90500
+static void
+findSampleScan(NodeInfoEnv& env, const SampleScan *node)
+{
+	findScan(env, &node->scan);
+	FIND_NODE(tablesample);
+}
+#endif
 
 static void
 findIndexScan(NodeInfoEnv& env, const IndexScan *node)
@@ -1951,6 +2100,9 @@ findForeignScan(NodeInfoEnv& env, const ForeignScan *node)
 	FIND_NODE(fdw_exprs);
 	FIND_NODE(fdw_private);
 #endif
+#if PG_VERSION_NUM >= 90500
+	FIND_EXPRLIST(fdw_scan_tlist);
+#endif
 }
 #endif
 
@@ -1959,8 +2111,10 @@ static void
 findCustomScan(NodeInfoEnv& env, const CustomScan *node)
 {
 	findScan(env, &node->scan);
-	FIND_NODE(custom_exprs);
+	FIND_NODE(custom_plans);
+	FIND_EXPRLIST(custom_exprs);
 	FIND_NODE(custom_private);
+	FIND_EXPRLIST(custom_scan_tlist);
 }
 #endif
 
@@ -1998,6 +2152,10 @@ static void
 findAgg(NodeInfoEnv& env, const Agg *node)
 {
 	findPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 90500
+	FIND_NODE(groupingSets);
+	FIND_NODE(chain);
+#endif
 }
 
 static void
@@ -2127,6 +2285,16 @@ findAggref(NodeInfoEnv& env, const Aggref *node)
 	FIND_NODE(aggorder);
 	FIND_NODE(aggdistinct);
 }
+
+#if PG_VERSION_NUM >= 90500
+static void
+findGroupingFunc(NodeInfoEnv& env, const GroupingFunc *node)
+{
+	FIND_NODE(args);
+	FIND_NODE(refs);
+	FIND_NODE(cols);
+}
+#endif
 
 static void
 findWindowFunc(NodeInfoEnv& env, const WindowFunc *node)
@@ -2387,6 +2555,18 @@ findFromExpr(NodeInfoEnv& env, const FromExpr *node)
 	FIND_NODE(quals);
 }
 
+#if PG_VERSION_NUM >= 90500
+static void
+findOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node)
+{
+	FIND_NODE(arbiterElems);
+	FIND_NODE(arbiterWhere);
+	FIND_NODE(onConflictSet);
+	FIND_NODE(onConflictWhere);
+	FIND_NODE(exclRelTlist);
+}
+#endif
+
 static void
 findPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 {
@@ -2542,11 +2722,28 @@ findQuery(NodeInfoEnv& env, const Query *node)
 #endif
 } 
 
+#if PG_VERSION_NUM >= 90500
+static void
+findTableSampleClause(NodeInfoEnv& env, const TableSampleClause *node)
+{
+	FIND_NODE(args);
+	FIND_NODE(repeatable);
+}
+#endif
+
 static void
 findSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node)
 {
 	/* nothing */
 }
+
+#if PG_VERSION_NUM >= 90500
+static void
+findGroupingSet(NodeInfoEnv& env, const GroupingSet *node)
+{
+	FIND_NODE(content);
+}
+#endif
 
 static void
 findWindowClause(NodeInfoEnv& env, const WindowClause *node)
@@ -2587,6 +2784,9 @@ findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 
 	FIND_NODE(alias);
 	FIND_NODE(eref);
+#if PG_VERSION_NUM >= 90400
+	FIND_NODE(securityQuals);
+#endif
 }
 
 
@@ -2822,6 +3022,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_SeqScan:
 			outputSeqScan(env, reinterpret_cast<const SeqScan*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+        case T_SampleScan:
+			outputSampleScan(env, reinterpret_cast<const SampleScan*>(obj));
+			break;
+#endif
 		case T_IndexScan:
 			outputIndexScan(env, reinterpret_cast<const IndexScan*>(obj));
 			break;
@@ -2938,6 +3143,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_Aggref:
 			outputAggref(env, reinterpret_cast<const Aggref*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_GroupingFunc:
+			outputGroupingFunc(env, reinterpret_cast<const GroupingFunc*>(obj));
+			break;
+#endif
 		case T_WindowFunc:
 			outputWindowFunc(env, reinterpret_cast<const WindowFunc*>(obj));
 			break;
@@ -3054,6 +3264,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_FromExpr:
 			outputFromExpr(env, reinterpret_cast<const FromExpr*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_OnConflictExpr:
+			outputOnConflictExpr(env, reinterpret_cast<const OnConflictExpr*>(obj));
+			break;
+#endif
 #if 0
 		case T_Path:
 			outputPath(env, obj);
@@ -3185,12 +3400,6 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_Query:
 			outputQuery(env, reinterpret_cast<const Query*>(obj));
 			break;
-		case T_SortGroupClause:
-			outputSortGroupClause(env, reinterpret_cast<const SortGroupClause*>(obj));
-			break;
-		case T_WindowClause:
-			outputWindowClause(env, reinterpret_cast<const WindowClause*>(obj));
-			break;
 #if 0
 		case T_RowMarkClause:
 			outputRowMarkClause(env, obj);
@@ -3205,9 +3414,27 @@ outputNode(NodeInfoEnv& env, const void *obj)
 			outputSetOperationStmt(env, obj);
 			break;
 #endif
+
 		case T_RangeTblEntry:
 			outputRangeTblEntry(env, reinterpret_cast<const RangeTblEntry*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_TableSampleClause: 
+			outputTableSampleClause(env, reinterpret_cast<const TableSampleClause*>(obj));
+			break;
+#endif
+		case T_SortGroupClause:
+			outputSortGroupClause(env, reinterpret_cast<const SortGroupClause*>(obj));
+			break;
+#if PG_VERSION_NUM >= 90500
+		case T_GroupingSet:
+			outputGroupingSet(env, reinterpret_cast<const GroupingSet*>(obj));
+			break;
+#endif
+		case T_WindowClause:
+			outputWindowClause(env, reinterpret_cast<const WindowClause*>(obj));
+			break;
+
 #if 0
 		case T_A_Expr:
 			outputAExpr(env, obj);
@@ -3454,6 +3681,12 @@ outputModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 
 	_outputPlan(env, &node->plan);
 	WRITE_ENUM_FIELD(operation, CmdType);
+#if PG_VERSION_NUM >= 90400
+	WRITE_BOOL_FIELD(canSetTag);
+#endif
+#if PG_VERSION_NUM >= 90500
+	WRITE_INDEX_FIELD(nominalRelation);
+#endif
 	WRITE_NODE_FIELD(resultRelations);
 #if PG_VERSION_NUM >= 90100
 	WRITE_INT_FIELD(resultRelIndex);
@@ -3468,6 +3701,14 @@ outputModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 #endif
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_INT_FIELD(epqParam);
+#if PG_VERSION_NUM >= 90500
+	WRITE_ENUM_FIELD(onConflictAction, OnConflictAction);
+	WRITE_NODE_FIELD(arbiterIndexes);
+	WRITE_NODE_FIELD(onConflictSet);
+	WRITE_NODE_FIELD(onConflictWhere);
+	WRITE_INDEX_FIELD(exclRelRTI);
+	WRITE_NODE_FIELD(exclRelTlist);
+#endif
 
 	env.popNode();
 }
@@ -3557,6 +3798,20 @@ outputSeqScan(NodeInfoEnv& env, const SeqScan *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 90500
+static void
+outputSampleScan(NodeInfoEnv& env, const SampleScan *node)
+{
+	env.pushNode(node, "SampleScan");
+
+	_outputScan(env, reinterpret_cast<const Scan*>(node));
+
+	WRITE_NODE_FIELD(tablesample);
+
+	env.popNode();
+}
+#endif
 
 static void
 outputIndexScan(NodeInfoEnv& env, const IndexScan *node)
@@ -3713,9 +3968,16 @@ outputForeignScan(NodeInfoEnv& env, const ForeignScan *node)
 
 	_outputScan(env, &node->scan);
 
+#if PG_VERSION_NUM >= 90500
+	WRITE_OID_FIELD(fs_server);
+#endif
 #if PG_VERSION_NUM >= 90200
 	WRITE_NODE_FIELD(fdw_exprs);
 	WRITE_NODE_FIELD(fdw_private);
+#endif
+#if PG_VERSION_NUM >= 90500
+	WRITE_NODE_FIELD(fdw_scan_tlist);
+	WRITE_BITMAPSET_FIELD(fs_relids);
 #endif
 	WRITE_BOOL_FIELD(fsSystemCol);
 	/* struct FdwPlan *fdwplan; */
@@ -3733,9 +3995,13 @@ outputCustomScan(NodeInfoEnv& env, const CustomScan *node)
 	_outputScan(env, &node->scan);
 
 	WRITE_UINT32_FIELD(flags);
+	WRITE_NODE_FIELD(custom_plans);
 	WRITE_NODE_FIELD(custom_exprs);
 	WRITE_NODE_FIELD(custom_private);
-	/* methods */
+	WRITE_NODE_FIELD(custom_scan_tlist);
+	WRITE_BITMAPSET_FIELD(custom_relids);
+
+	/* @todo methods */
 
 	env.popNode();
 }
@@ -3858,6 +4124,11 @@ outputAgg(NodeInfoEnv& env, const Agg *node)
 	env.outputOidArray("grpOperators", node->numCols, node->grpOperators);
 
 	WRITE_LONG_FIELD(numGroups);
+
+#if PG_VERSION_NUM >= 90500
+	WRITE_NODE_FIELD(groupingSets);
+	WRITE_NODE_FIELD(chain);
+#endif
 
 	env.popNode();
 }
@@ -3988,6 +4259,8 @@ outputPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node)
 	WRITE_INDEX_FIELD(rowmarkId);
 	WRITE_ENUM_FIELD(markType, RowMarkType);
 #if PG_VERSION_NUM >= 90500
+	WRITE_INT_FIELD(allMarkTypes);
+	WRITE_ENUM_FIELD(strength, LockClauseStrength);
 	WRITE_ENUM_FIELD(waitPolicy, LockWaitPolicy);
 #else
 	WRITE_BOOL_FIELD(noWait);
@@ -4159,6 +4432,22 @@ outputAggref(NodeInfoEnv& env, const Aggref *node)
 	env.popNode();
 }
 
+#if PG_VERSION_NUM >= 90500
+static void
+outputGroupingFunc(NodeInfoEnv& env, const GroupingFunc *node)
+{
+	env.pushNode(node, "GroupingFunc");
+
+	WRITE_NODE_FIELD(args);
+	WRITE_NODE_FIELD(refs);
+	WRITE_NODE_FIELD(cols);
+	WRITE_INDEX_FIELD(agglevelsup);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+#endif
+
 static void
 outputWindowFunc(NodeInfoEnv& env, const WindowFunc *node)
 {
@@ -4301,6 +4590,9 @@ outputSubLink(NodeInfoEnv& env, const SubLink *node)
 	env.pushNode(node, "SubLink");
 
 	WRITE_ENUM_FIELD(subLinkType, SubLinkType);
+#if PG_VERSION_NUM >= 90500
+	WRITE_INT_FIELD(subLinkId);
+#endif
 	WRITE_NODE_FIELD(testexpr);
 	WRITE_NODE_FIELD(operName);
 	WRITE_NODE_FIELD(subselect);
@@ -4723,6 +5015,25 @@ outputFromExpr(NodeInfoEnv& env, const FromExpr *node)
 	env.popNode();
 }
 
+#if PG_VERSION_NUM >= 90500
+static void
+outputOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node)
+{
+	env.pushNode(node, "OnConflictExpr");
+
+	WRITE_ENUM_FIELD(action, OnConflictAction);
+	WRITE_NODE_FIELD(arbiterElems);
+	WRITE_NODE_FIELD(arbiterWhere);
+	WRITE_OID_FIELD(constraint);
+	WRITE_NODE_FIELD(onConflictSet);
+	WRITE_NODE_FIELD(onConflictWhere);
+	WRITE_INT_FIELD(exclRelIndex);
+	WRITE_NODE_FIELD(exclRelTlist);
+
+	env.popNode();
+}
+#endif
+
 static void
 outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 {
@@ -4983,6 +5294,20 @@ outputQuery(NodeInfoEnv& env, const Query *node)
 	env.popNode();
 }
 
+#if PG_VERSION_NUM >= 90500
+static void
+outputTableSampleClause(NodeInfoEnv& env, const TableSampleClause *node)
+{
+	env.pushNode(node, "TableSampleClause");
+
+	WRITE_OID_FIELD(tsmhandler);
+	WRITE_NODE_FIELD(args);
+	WRITE_NODE_FIELD(repeatable);
+
+	env.popNode();
+}
+#endif
+
 static void
 outputSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node)
 {
@@ -4998,6 +5323,20 @@ outputSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 90500
+static void
+outputGroupingSet(NodeInfoEnv& env, const GroupingSet *node)
+{
+	env.pushNode(node, "GroupingSet");
+
+	WRITE_ENUM_FIELD(kind, GroupingSetKind);
+	WRITE_NODE_FIELD(content);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+#endif
 
 static void
 outputWindowClause(NodeInfoEnv& env, const WindowClause *node)
@@ -5023,8 +5362,6 @@ outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 	env.pushNode(node, "RangeTblEntry(RTE)");
 
 	/* put alias + eref first to make dump more legible */
-	WRITE_NODE_FIELD(alias);
-	WRITE_NODE_FIELD(eref);
 	WRITE_ENUM_FIELD(rtekind, RTEKind);
 
 	switch (node->rtekind)
@@ -5079,12 +5416,24 @@ outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 			break;
 	}
 
+	WRITE_NODE_FIELD(alias);
+	WRITE_NODE_FIELD(eref);
+#if PG_VERSION_NUM >= 90300
+	WRITE_BOOL_FIELD(lateral);
+#endif
 	WRITE_BOOL_FIELD(inh);
 	WRITE_BOOL_FIELD(inFromCl);
 	WRITE_UINT_FIELD(requiredPerms);
 	WRITE_OID_FIELD(checkAsUser);
 	WRITE_BITMAPSET_FIELD(selectedCols);
-	WRITE_BITMAPSET_FIELD(modifiedCols);
+#if PG_VERSION_NUM < 90500
+	WRITE_BITMAPSET_FIELD(modifiedCols);	
+#else
+	WRITE_BITMAPSET_FIELD(updatedCols);
+#endif
+#if PG_VERSION_NUM >= 90400
+	WRITE_NODE_FIELD(securityQuals);
+#endif
 
 	env.popNode();
 }
