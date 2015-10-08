@@ -1,8 +1,8 @@
 /*-------------------------------------------------------------------------
  *
- * plan_tree_veiw.cpp
+ * plan_tree_view.cpp
  *
- * Copyright (c) 2014 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014,2015 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -1072,6 +1072,7 @@ static void findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
 static void findRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node);
 static void findQuery(NodeInfoEnv& env, const Query *node);
 static void findSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node);
+static void findWindowClause(NodeInfoEnv& env, const WindowClause *node);
 static void findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node);
 
 static void outputNode(NodeInfoEnv& env, const void *obj);
@@ -1179,6 +1180,7 @@ static void outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
 static void outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node);
 static void outputQuery(NodeInfoEnv& env, const Query *node);
 static void outputSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node);
+static void outputWindowClause(NodeInfoEnv& env, const WindowClause *node);
 static void outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node);
 
 char *
@@ -1652,10 +1654,10 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_SortGroupClause:
 			findSortGroupClause(env, reinterpret_cast<const SortGroupClause*>(obj));
 			break;
-#if 0
 		case T_WindowClause:
-			findWindowClause(env, obj);
+			findWindowClause(env, reinterpret_cast<const WindowClause*>(obj));
 			break;
+#if 0
 		case T_RowMarkClause:
 			findRowMarkClause(env, obj);
 			break;
@@ -2547,6 +2549,15 @@ findSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node)
 }
 
 static void
+findWindowClause(NodeInfoEnv& env, const WindowClause *node)
+{
+	FIND_NODE(partitionClause);
+	FIND_NODE(orderClause);
+	FIND_NODE(startOffset);
+	FIND_NODE(endOffset);
+}
+
+static void
 findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 {
 	FIND_NODE(subquery);
@@ -3177,10 +3188,10 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_SortGroupClause:
 			outputSortGroupClause(env, reinterpret_cast<const SortGroupClause*>(obj));
 			break;
-#if 0
 		case T_WindowClause:
-			outputWindowClause(env, obj);
+			outputWindowClause(env, reinterpret_cast<const WindowClause*>(obj));
 			break;
+#if 0
 		case T_RowMarkClause:
 			outputRowMarkClause(env, obj);
 			break;
@@ -4843,7 +4854,7 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 static void
 outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 {
-	int i, len;
+	int len;
 
 	env.pushNode(node, "RelOptInfo");
 
@@ -4984,6 +4995,24 @@ outputSortGroupClause(NodeInfoEnv& env, const SortGroupClause *node)
 #if PG_VERSION_NUM >= 90100
 	WRITE_BOOL_FIELD(hashable);
 #endif
+
+	env.popNode();
+}
+
+static void
+outputWindowClause(NodeInfoEnv& env, const WindowClause *node)
+{
+	env.pushNode(node, "WindowClause");
+
+	WRITE_STRING_FIELD(name);
+	WRITE_STRING_FIELD(refname);
+	WRITE_NODE_FIELD(partitionClause);
+	WRITE_NODE_FIELD(orderClause);
+	WRITE_INT_FIELD(frameOptions);
+	WRITE_NODE_FIELD(startOffset);
+	WRITE_NODE_FIELD(endOffset);
+	WRITE_INDEX_FIELD(winref);
+	WRITE_BOOL_FIELD(copiedOrder);
 
 	env.popNode();
 }
