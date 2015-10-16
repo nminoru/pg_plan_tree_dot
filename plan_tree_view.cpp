@@ -1159,6 +1159,9 @@ static void findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
 static void findRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node);
 static void findQuery(NodeInfoEnv& env, const Query *node);
 static void findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node);
+#if PG_VERSION_NUM >= 90400
+static void findRangeTblFunction(NodeInfoEnv& env, const RangeTblFunction *node);
+#endif
 #if PG_VERSION_NUM >= 90500
 static void findTableSampleClause(NodeInfoEnv& env, const TableSampleClause *node);
 #endif
@@ -1282,6 +1285,9 @@ static void outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
 static void outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node);
 static void outputQuery(NodeInfoEnv& env, const Query *node);
 static void outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node);
+#if PG_VERSION_NUM >= 90400
+static void outputRangeTblFunction(NodeInfoEnv& env, const RangeTblFunction *node);
+#endif
 #if PG_VERSION_NUM >= 90500
 static void outputTableSampleClause(NodeInfoEnv& env, const TableSampleClause *node);
 #endif
@@ -1778,6 +1784,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_RangeTblEntry:
 			findRangeTblEntry(env, reinterpret_cast<const RangeTblEntry*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90400
+		case T_RangeTblFunction:
+			findRangeTblFunction(env, reinterpret_cast<const RangeTblFunction*>(obj));
+			break;
+#endif
 #if PG_VERSION_NUM >= 90500
 		case T_TableSampleClause: 
 			findTableSampleClause(env, reinterpret_cast<const TableSampleClause*>(obj));
@@ -2789,6 +2800,17 @@ findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 #endif
 }
 
+#if PG_VERSION_NUM >= 90400
+static void
+findRangeTblFunction(NodeInfoEnv& env, const RangeTblFunction *node)
+{
+	FIND_NODE(funcexpr);
+	FIND_NODE(funccolnames);
+	FIND_NODE(funccoltypes);
+	FIND_NODE(funccoltypmods);
+	FIND_NODE(funccolcollations);
+}
+#endif
 
 /****************************************************************************/
 /*                                                                          */
@@ -3418,6 +3440,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_RangeTblEntry:
 			outputRangeTblEntry(env, reinterpret_cast<const RangeTblEntry*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90400
+		case T_RangeTblFunction:
+			outputRangeTblFunction(env, reinterpret_cast<const RangeTblFunction*>(obj));
+			break;
+#endif
 #if PG_VERSION_NUM >= 90500
 		case T_TableSampleClause: 
 			outputTableSampleClause(env, reinterpret_cast<const TableSampleClause*>(obj));
@@ -5437,3 +5464,21 @@ outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 90400
+static void
+outputRangeTblFunction(NodeInfoEnv& env, const RangeTblFunction *node)
+{
+	env.pushNode(node, "RangeTblFunction");
+
+	WRITE_NODE_FIELD(funcexpr);
+	WRITE_INT_FIELD(funccolcount);
+	WRITE_NODE_FIELD(funccolnames);
+	WRITE_NODE_FIELD(funccoltypes);
+	WRITE_NODE_FIELD(funccoltypmods);
+	WRITE_NODE_FIELD(funccolcollations);
+	WRITE_BITMAPSET_FIELD(funcparams);
+
+	env.popNode();	
+}
+#endif
