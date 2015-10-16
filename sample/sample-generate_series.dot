@@ -1,0 +1,44 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: SELECT * FROM generate_series(1, 100);"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+14[label = "<head> Alias (14)|aliasname: generate_series|<colnames> colnames: "]
+16[label = "<head> String (16)|generate_series"]
+15[label = "<head> List (15)|<1> [0]"]
+7[label = "<head> RangeTblFunction (7)|<funcexpr> funcexpr: |funccolcount: 1|funcparams: (b)"]
+10[label = "<head> Const (10)|consttype: 23|consttypmod: -1|constlen: 4|constbyval: true|constisnull: false|location: 30"]
+9[label = "<head> List (9)|<1> [0]|<2> [1]"]
+11[label = "<head> Const (11)|consttype: 23|consttypmod: -1|constlen: 4|constbyval: true|constisnull: false|location: 33"]
+8[label = "<head> FuncExpr (8)|funcid: 1067|funcresulttype: 23|funcretset: true|funcvariadic: false|funcformat: COERCE_EXPLICIT_CALL|<args> args: |location: 14"]
+6[label = "<head> List (6)|<1> [0]"]
+2[label = "<head> FunctionScan (2)|startup_cost: 0.00|total_cost: 10.00|plan_rows: 1000|plan_width: 4|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 1|<functions> functions: |funcordinality: false"]
+13[label = "<head> RangeTblEntry(RTE) (13)|rtekind: RTE_FUNCTION|funcordinality: false|<eref> eref: |lateral: false|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b)|modifiedCols: (b)"]
+12[label = "<head> List (12)|<1> [0]"]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|nParamExec: 0"]
+
+14:colnames -> 15:head [headlabel = "14", taillabel = "15"]
+15:1 -> 16:head [headlabel = "15", taillabel = "16"]
+7:funcexpr -> 8:head [headlabel = "7", taillabel = "8"]
+9:1 -> 10:head [headlabel = "9", taillabel = "10"]
+9:2 -> 11:head [headlabel = "9", taillabel = "11"]
+8:args -> 9:head [headlabel = "8", taillabel = "9"]
+6:1 -> 7:head [headlabel = "6", taillabel = "7"]
+2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
+2:functions -> 6:head [headlabel = "2", taillabel = "6"]
+13:eref -> 14:head [headlabel = "13", taillabel = "14"]
+12:1 -> 13:head [headlabel = "12", taillabel = "13"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 12:head [headlabel = "1", taillabel = "12"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: generate_series|resjunk: false"]
+	5[label = "<head> Var (5)|varno: 1|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 7"]
+	3[label = "<head> List (3)|<1> [0]"]
+
+	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
+	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
+}
+
+}
+
