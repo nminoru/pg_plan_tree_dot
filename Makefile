@@ -15,5 +15,10 @@ include $(PGXS)
 COMPILER = $(CXX) $(CFLAGS)
 
 %.o : %.cpp
+ifdef DEPDIR
 	@if test ! -d $(DEPDIR); then mkdir -p $(DEPDIR); fi
 	$(CXX) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -MMD -MP -MF $(DEPDIR)/$(*F).Po
+else
+	$(CXX) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+endif
+
