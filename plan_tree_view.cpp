@@ -2023,6 +2023,9 @@ findIndexScan(NodeInfoEnv& env, const IndexScan *node)
 	FIND_EXPRLIST(indexorderby);
 	FIND_EXPRLIST(indexorderbyorig);
 #endif
+#if PG_VERSION_NUM >= 90500
+	FIND_EXPRLIST(indexorderbyops);
+#endif
 }
 
 #if PG_VERSION_NUM >= 90200
@@ -2113,6 +2116,7 @@ findForeignScan(NodeInfoEnv& env, const ForeignScan *node)
 #endif
 #if PG_VERSION_NUM >= 90500
 	FIND_EXPRLIST(fdw_scan_tlist);
+	FIND_EXPRLIST(fdw_recheck_quals);
 #endif
 }
 #endif
@@ -2626,20 +2630,27 @@ findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 #endif
 	FIND_NODE(init_plans);
 	FIND_NODE(cte_plan_ids);
+#if PG_VERSION_NUM >= 90500
+	FIND_NODE(multiexpr_params);
+#endif
 	FIND_NODE(eq_classes);
 	FIND_NODE(canon_pathkeys);
 	FIND_NODE(left_join_clauses);
 	FIND_NODE(right_join_clauses);
 	FIND_NODE(full_join_clauses);
 	FIND_NODE(join_info_list);
-#if PG_VERSION_NUM >= 90300
+#if PG_VERSION_NUM < 90500 && PG_VERSION_NUM >= 90300
 	FIND_NODE(lateral_info_list);
 #endif
 	FIND_NODE(append_rel_list);
+	FIND_NODE(rowMarks);
 	FIND_NODE(placeholder_list);
 	FIND_NODE(query_pathkeys);
 	FIND_NODE(group_pathkeys);
 	FIND_NODE(window_pathkeys);
+#if PG_VERSION_NUM >= 90500
+	FIND_NODE(distinct_pathkeys);
+#endif
 	FIND_NODE(sort_pathkeys);
 #if PG_VERSION_NUM >= 90100
 	FIND_NODE(minmax_aggs);
@@ -3854,6 +3865,9 @@ outputIndexScan(NodeInfoEnv& env, const IndexScan *node)
 	WRITE_NODE_FIELD(indexorderby);
 	WRITE_NODE_FIELD(indexorderbyorig);
 #endif
+#if PG_VERSION_NUM >= 90500
+	WRITE_NODE_FIELD(indexorderbyops);
+#endif
 	WRITE_ENUM_FIELD(indexorderdir, ScanDirection);
 
 	env.popNode();
@@ -4004,6 +4018,7 @@ outputForeignScan(NodeInfoEnv& env, const ForeignScan *node)
 #endif
 #if PG_VERSION_NUM >= 90500
 	WRITE_NODE_FIELD(fdw_scan_tlist);
+	WRITE_NODE_FIELD(fdw_recheck_quals);
 	WRITE_BITMAPSET_FIELD(fs_relids);
 #endif
 	WRITE_BOOL_FIELD(fsSystemCol);
@@ -5135,13 +5150,16 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 #endif
 	WRITE_NODE_FIELD(init_plans);
 	WRITE_NODE_FIELD(cte_plan_ids);
+#if PG_VERSION_NUM >= 90500
+	WRITE_NODE_FIELD(multiexpr_params);
+#endif
 	WRITE_NODE_FIELD(eq_classes);
 	WRITE_NODE_FIELD(canon_pathkeys);
 	WRITE_NODE_FIELD(left_join_clauses);
 	WRITE_NODE_FIELD(right_join_clauses);
 	WRITE_NODE_FIELD(full_join_clauses);
 	WRITE_NODE_FIELD(join_info_list);
-#if PG_VERSION_NUM >= 90300
+#if PG_VERSION_NUM < 90500 && PG_VERSION_NUM >= 90300
 	WRITE_NODE_FIELD(lateral_info_list);
 #endif
 	WRITE_NODE_FIELD(append_rel_list);
@@ -5169,6 +5187,9 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 #if PG_VERSION_NUM >= 90300
 	WRITE_BOOL_FIELD(hasLateralRTEs);
 #endif
+#if PG_VERSION_NUM >= 90500
+	WRITE_BOOL_FIELD(hasDeletedRTEs);
+#endif
 	WRITE_BOOL_FIELD(hasHavingQual);
 	WRITE_BOOL_FIELD(hasPseudoConstantQuals);
 	WRITE_BOOL_FIELD(hasRecursion);
@@ -5184,7 +5205,10 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	void	   *join_search_private;	
 #endif
 
-	WRITE_NODE_FIELD(plan_params);
+#if 0
+	/* @todo */
+	WRITE_NODE_FIELD(grouping_map);
+#endif
   
 	env.popNode();
 }
