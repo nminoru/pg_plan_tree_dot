@@ -16,7 +16,7 @@ Requirements
 
 Tested on:
 
-- PostgreSQL 9.0.23, 9.1.22, 9.2.13, 9.3.13, 9.4.8 and 9.5.3 under x86-64 CentOS 6.x
+- PostgreSQL 9.0.23, 9.1.23, 9.2.18, 9.3.14, 9.4.9, 9.5.4, and 9.6rc1 under x86-64 CentOS 6.x
 
 Building
 ========

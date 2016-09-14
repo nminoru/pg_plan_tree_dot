@@ -2,7 +2,7 @@
  *
  * plan_tree_view.cpp
  *
- * Copyright (c) 2014,2015 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014-2016 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -97,6 +97,9 @@ extern "C" {
 #define WRITE_COST_FIELD(fldname) \
 	do {env.outputCost(#fldname, node->fldname);} while (0)
 
+#define WRITE_QUALCOST_FIELD(fldname) \
+	do {env.outputQualCost(#fldname, node->fldname);} while (0)
+
 /* Write a boolean field */
 #define WRITE_BOOL_FIELD(fldname) \
 	do {env.outputBool(#fldname, node->fldname);} while (0)
@@ -104,6 +107,9 @@ extern "C" {
 /* Write a character-string (possibly NULL) field */
 #define WRITE_STRING_FIELD(fldname) \
 	do {if (node->fldname != NULL) {env.outputString(#fldname, node->fldname);}} while (0)
+
+#define WRITE_POINTER_FIELD(fldname) \
+	do {if (node->fldname != NULL) {env.outputPointer(#fldname, node->fldname);}} while (0)
 
 /* Write an enumerated-type field as an integer code */
 #define WRITE_ENUM_FIELD(fldname, enumtype) \
@@ -121,9 +127,8 @@ extern "C" {
 #define WRITE_NODE_FIELD(fldname) \
 	do {if (node->fldname != NULL) {env.outputNode(#fldname, node, node->fldname);}} while (0)
 
-#define WRITE_NODE_INDEX_FIELD(fldname, index)										\
+#define WRITE_NODE_INDEX_FIELD(fldname, index) \
 	do {if (node->fldname[index] != NULL) {env.outputNodeIndex(#fldname, index, node, node->fldname[index]);}} while (0)
-
 
 typedef std::map<const void*, unsigned int>		NodeIdMap;
 typedef std::pair<const void*, const void*>		EdgeKeyType;
@@ -289,12 +294,22 @@ public:
 		append("|%s: %.2f", fldname, value);
 	}
 
+	void outputQualCost(const char *fldname, QualCost value)
+	{
+		append("|%s: startup=%.2f, per_tuple=%.2f", fldname, value.startup, value.per_tuple);
+	}
+
 	void outputString(const char *fldname, const char *value)
 	{
 		if (value)
 			append("|%s: %s", fldname, value);
 		else
 			append("|%s: NULL", fldname);
+	}
+
+	void outputPointer(const char *fldname, const void *p)
+	{
+		append("|%s: %p", fldname, p);
 	}
 
 	void outputBitmapset(const char *fldname, const Bitmapset *bitmapset)
@@ -454,7 +469,7 @@ public:
 				append("SETOPCMD_INTERSECT_ALL");
 				break;
 			case SETOPCMD_EXCEPT:
-				append("SETOPCMD_EXCEPTN");
+				append("SETOPCMD_EXCEPT");
 				break;
 			case SETOPCMD_EXCEPT_ALL:
 				append("SETOPCMD_EXCEPT_ALL");
@@ -706,6 +721,11 @@ public:
 			case RELOPT_OTHER_MEMBER_REL:
 				append("RELOPT_OTHER_MEMBER_REL");
 				break;
+#if PG_VERSION_NUM >= 90600
+			case RELOPT_UPPER_REL:
+				append("RELOPT_UPPER_REL");
+				break;
+#endif
 			case RELOPT_DEADREL:
 				append("RELOPT_DEADREL");
 				break;
@@ -976,6 +996,28 @@ public:
 	}
 #endif
 
+#if PG_VERSION_NUM >= 90600
+	void outputEnum(const char *fldname, AggSplit aggsplit)
+	{
+		append("|%s: ", fldname);
+		switch (aggsplit)
+		{
+			case AGGSPLIT_SIMPLE:
+				append("AGGSPLIT_SIMPLE");
+				break;
+			case AGGSPLIT_INITIAL_SERIAL:
+				append("AGGSPLIT_INITIAL_SERIAL");
+				break;
+			case AGGSPLIT_FINAL_DESERIAL:
+				append("AGGSPLIT_FINAL_DESERIAL");
+				break;
+			default:
+				append("AggSplit(Unknown: %d)", aggsplit);
+				break;
+		}
+	}
+#endif
+
 	void outputOidArray(const char *fldname, int size, Oid* oidarray)
 	{
 		int i;
@@ -1091,6 +1133,9 @@ static void   findGroup(NodeInfoEnv& env, const Group *node);
 static void   findMaterial(NodeInfoEnv& env, const Material *node);
 static void   findSort(NodeInfoEnv& env, const Sort *node);
 static void   findUnique(NodeInfoEnv& env, const Unique *node);
+#if PG_VERSION_NUM >= 90600
+static void   findGather(NodeInfoEnv& env, const Gather *node);
+#endif
 static void   findHash(NodeInfoEnv& env, const Hash *node);
 static void   findSetOp(NodeInfoEnv& env, const SetOp *node);
 static void   findLockRows(NodeInfoEnv& env, const LockRows *node);
@@ -1147,6 +1192,9 @@ static void   findCoerceToDomain(NodeInfoEnv& env, const CoerceToDomain *node);
 static void   findCoerceToDomainValue(NodeInfoEnv& env, const CoerceToDomainValue *node);
 static void   findSetToDefault(NodeInfoEnv& env, const SetToDefault *node);
 static void   findCurrentOfExpr(NodeInfoEnv& env, const CurrentOfExpr *node);
+#if PG_VERSION_NUM >= 90500
+static void   findInferenceElem(NodeInfoEnv& env, const InferenceElem *node);
+#endif
 static void   findTargetEntry(NodeInfoEnv& env, const TargetEntry *node);
 static void   findRangeTblRef(NodeInfoEnv& env, const RangeTblRef *node);
 static void   findJoinExpr(NodeInfoEnv& env, const JoinExpr *node);
@@ -1217,6 +1265,9 @@ static void   outputGroup(NodeInfoEnv& env, const Group *node);
 static void   outputMaterial(NodeInfoEnv& env, const Material *node);
 static void   outputSort(NodeInfoEnv& env, const Sort *node);
 static void   outputUnique(NodeInfoEnv& env, const Unique *node);
+#if PG_VERSION_NUM >= 90600
+static void   outputGather(NodeInfoEnv& env, const Gather *node);
+#endif
 static void   outputHash(NodeInfoEnv& env, const Hash *node);
 static void   outputSetOp(NodeInfoEnv& env, const SetOp *node);
 static void   outputLockRows(NodeInfoEnv& env, const LockRows *node);
@@ -1273,6 +1324,9 @@ static void   outputCoerceToDomain(NodeInfoEnv& env, const CoerceToDomain *node)
 static void   outputCoerceToDomainValue(NodeInfoEnv& env, const CoerceToDomainValue *node);
 static void   outputSetToDefault(NodeInfoEnv& env, const SetToDefault *node);
 static void   outputCurrentOfExpr(NodeInfoEnv& env, const CurrentOfExpr *node);
+#if PG_VERSION_NUM >= 90500
+static void   outputInferenceElem(NodeInfoEnv& env, const InferenceElem *node);
+#endif
 static void   outputTargetEntry(NodeInfoEnv& env, const TargetEntry *node);
 static void   outputRangeTblRef(NodeInfoEnv& env, const RangeTblRef *node);
 static void   outputJoinExpr(NodeInfoEnv& env, const JoinExpr *node);
@@ -1482,6 +1536,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_Unique:
 			findUnique(env, reinterpret_cast<const Unique*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90600
+		case T_Gather:
+			findGather(env, reinterpret_cast<const Gather*>(obj));
+			break;
+#endif
 		case T_Hash:
 			findHash(env, reinterpret_cast<const Hash*>(obj));
 			break;
@@ -1505,6 +1564,7 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_PlanInvalItem:
 			findPlanInvalItem(env, reinterpret_cast<const PlanInvalItem*>(obj));
 			break;
+
 		case T_Alias:
 			findAlias(env, reinterpret_cast<const Alias*>(obj));
 			break;
@@ -1635,6 +1695,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_CurrentOfExpr:
 			findCurrentOfExpr(env, reinterpret_cast<const CurrentOfExpr*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_InferenceElem:
+			findInferenceElem(env, reinterpret_cast<const InferenceElem*>(obj));
+			break;
+#endif
 		case T_TargetEntry:
 			findTargetEntry(env, reinterpret_cast<const TargetEntry*>(obj));
 			break;
@@ -2205,6 +2270,14 @@ findUnique(NodeInfoEnv& env, const Unique *node)
 	findPlan(env, &node->plan);
 }
 
+#if PG_VERSION_NUM >= 90600
+static void
+findGather(NodeInfoEnv& env, const Gather *node)
+{
+	findPlan(env, &node->plan);
+}
+#endif
+
 static void
 findHash(NodeInfoEnv& env, const Hash *node)
 {
@@ -2540,6 +2613,14 @@ findCurrentOfExpr(NodeInfoEnv& env, const CurrentOfExpr *node)
 	/* nothing */
 }
 
+#if PG_VERSION_NUM >= 90500
+static void
+findInferenceElem(NodeInfoEnv& env, const InferenceElem *node)
+{
+	FIND_NODE(expr);
+}
+#endif
+
 static void
 findTargetEntry(NodeInfoEnv& env, const TargetEntry *node)
 {
@@ -2645,6 +2726,9 @@ findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	FIND_NODE(append_rel_list);
 	FIND_NODE(rowMarks);
 	FIND_NODE(placeholder_list);
+#if PG_VERSION_NUM >= 90600
+	FIND_NODE(fkey_list);
+#endif
 	FIND_NODE(query_pathkeys);
 	FIND_NODE(group_pathkeys);
 	FIND_NODE(window_pathkeys);
@@ -2655,8 +2739,21 @@ findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 #if PG_VERSION_NUM >= 90100
 	FIND_NODE(minmax_aggs);
 #endif
+#if PG_VERSION_NUM >= 90500
+	FIND_NODE(grouping_map);
+#endif
 	FIND_NODE(initial_rels);
+
+#if PG_VERSION_NUM >= 90600
+	FIND_NODE(processed_tlist);
+#endif
+
+#if PG_VERSION_NUM >= 90600
+	/* @todo */
+	/* struct Path *non_recursive_path; */
+#else
 	FIND_NODE(non_recursive_plan);
+#endif
 #if PG_VERSION_NUM >= 90100
 	FIND_NODE(curOuterParams);
 #endif
@@ -2666,7 +2763,13 @@ findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 static void
 findRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 {
+#if PG_VERSION_NUM >= 90600
+	/* @todo */
+	/* struct PathTarget *reltarget; */
+#else
 	FIND_NODE(reltargetlist);
+#endif
+
 	FIND_NODE(pathlist);
 #if PG_VERSION_NUM >= 90200
 	FIND_NODE(ppilist);
@@ -2681,7 +2784,10 @@ findRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 	FIND_NODE(lateral_vars);
 #endif
 	FIND_NODE(indexlist);
+
+#if PG_VERSION_NUM < 90600
 	FIND_NODE(subplan);
+#endif
 
 #if PG_VERSION_NUM >= 90300
 	FIND_NODE(subroot);
@@ -2731,6 +2837,9 @@ findQuery(NodeInfoEnv& env, const Query *node)
 	FIND_NODE(targetList);
 	FIND_NODE(returningList);
 	FIND_NODE(groupClause);
+#if PG_VERSION_NUM >= 90500
+	FIND_NODE(groupingSets);
+#endif
 	FIND_NODE(havingQual);
 	FIND_NODE(windowClause);
 	FIND_NODE(distinctClause);
@@ -3132,6 +3241,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_Unique:
 			outputUnique(env, reinterpret_cast<const Unique*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90600
+		case T_Gather:
+			outputGather(env, reinterpret_cast<const Gather*>(obj));
+			break;
+#endif
 		case T_Hash:
 			outputHash(env, reinterpret_cast<const Hash*>(obj));
 			break;
@@ -3285,6 +3399,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_CurrentOfExpr:
 			outputCurrentOfExpr(env, reinterpret_cast<const CurrentOfExpr*>(obj));
 			break;
+#if PG_VERSION_NUM >= 90500
+		case T_InferenceElem:
+			outputInferenceElem(env, reinterpret_cast<const InferenceElem*>(obj));
+			break;
+#endif
 		case T_TargetEntry:
 			outputTargetEntry(env, reinterpret_cast<const TargetEntry*>(obj));
 			break;
@@ -3548,6 +3667,11 @@ _outputPlan(NodeInfoEnv& env, const Plan *node)
 	WRITE_FLOAT_FIELD(plan_rows, "%.0f");
 	WRITE_INT_FIELD(plan_width);
 
+#if PG_VERSION_NUM >= 90600
+	WRITE_BOOL_FIELD(parallel_aware);
+	WRITE_INT_FIELD(plan_node_id);
+#endif
+
 	WRITE_NODE_FIELD(targetlist);
 	WRITE_NODE_FIELD(qual);
 	WRITE_NODE_FIELD(lefttree);
@@ -3671,6 +3795,10 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 #endif
 	WRITE_BOOL_FIELD(canSetTag);
 	WRITE_BOOL_FIELD(transientPlan);
+#if PG_VERSION_NUM >= 90600
+	WRITE_BOOL_FIELD(dependsOnRole);
+	WRITE_BOOL_FIELD(parallelModeNeeded);
+#endif
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(resultRelations);
@@ -3684,7 +3812,7 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	WRITE_NODE_FIELD(relationOids);
 	WRITE_NODE_FIELD(invalItems);
 	WRITE_INT_FIELD(nParamExec);
-#if PG_VERSION_NUM >= 90500
+#if PG_VERSION_NUM < 90600 && PG_VERSION_NUM >= 90500
 	WRITE_BOOL_FIELD(hasRowSecurity);
 #endif
 
@@ -3736,6 +3864,9 @@ outputModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 	WRITE_NODE_FIELD(returningLists);
 #if PG_VERSION_NUM >= 90300
 	WRITE_NODE_FIELD(fdwPrivLists);
+#endif
+#if PG_VERSION_NUM >= 90600
+	WRITE_BITMAPSET_FIELD(fdwDirectModifyPlans);
 #endif
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_INT_FIELD(epqParam);
@@ -4009,6 +4140,9 @@ outputForeignScan(NodeInfoEnv& env, const ForeignScan *node)
 
 	_outputScan(env, &node->scan);
 
+#if PG_VERSION_NUM >= 90600
+	WRITE_ENUM_FIELD(operation, CmdType);
+#endif
 #if PG_VERSION_NUM >= 90500
 	WRITE_OID_FIELD(fs_server);
 #endif
@@ -4043,7 +4177,7 @@ outputCustomScan(NodeInfoEnv& env, const CustomScan *node)
 	WRITE_NODE_FIELD(custom_scan_tlist);
 	WRITE_BITMAPSET_FIELD(custom_relids);
 
-	/* @todo methods */
+	WRITE_POINTER_FIELD(methods);
 
 	env.popNode();
 }
@@ -4167,6 +4301,10 @@ outputAgg(NodeInfoEnv& env, const Agg *node)
 
 	WRITE_LONG_FIELD(numGroups);
 
+#if PG_VERSION_NUM >= 90600
+	WRITE_BITMAPSET_FIELD(aggParams);
+#endif
+
 #if PG_VERSION_NUM >= 90500
 	WRITE_NODE_FIELD(groupingSets);
 	WRITE_NODE_FIELD(chain);
@@ -4214,6 +4352,22 @@ outputUnique(NodeInfoEnv& env, const Unique *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 90600
+static void
+outputGather(NodeInfoEnv& env, const Gather *node)
+{
+	env.pushNode(node, "Gather");
+
+	_outputPlan(env, &node->plan);
+
+	WRITE_INT_FIELD(num_workers);
+	WRITE_BOOL_FIELD(single_copy);
+	WRITE_BOOL_FIELD(invisible);
+
+	env.popNode();
+}
+#endif
 
 static void
 outputHash(NodeInfoEnv& env, const Hash *node)
@@ -4412,6 +4566,10 @@ outputConst(NodeInfoEnv& env, const Const *node)
 	WRITE_INT_FIELD(constlen);
 	WRITE_BOOL_FIELD(constbyval);
 	WRITE_BOOL_FIELD(constisnull);
+#if PG_VERSION_NUM >= 90600
+	WRITE_BOOL_FIELD(constbyval);
+#endif
+
 	WRITE_LOCATION_FIELD(location);
 
 #if 0
@@ -4454,6 +4612,9 @@ outputAggref(NodeInfoEnv& env, const Aggref *node)
 	WRITE_OID_FIELD(aggcollid);
 	WRITE_OID_FIELD(inputcollid);
 #endif
+#if PG_VERSION_NUM >= 90600
+	WRITE_OID_FIELD(aggtranstype);
+#endif
 #if PG_VERSION_NUM >= 90400
 	WRITE_NODE_FIELD(aggdirectargs);
 #endif
@@ -4469,6 +4630,9 @@ outputAggref(NodeInfoEnv& env, const Aggref *node)
 	WRITE_CHAR_FIELD(aggkind);
 #endif
 	WRITE_INDEX_FIELD(agglevelsup); /* > 0 if agg belongs to outer query */
+#if PG_VERSION_NUM >= 90600
+	WRITE_ENUM_FIELD(aggsplit, AggSplit);
+#endif
 	WRITE_LOCATION_FIELD(location);
 
 	env.popNode();
@@ -4765,6 +4929,11 @@ outputConvertRowtypeExpr(NodeInfoEnv& env, const ConvertRowtypeExpr *node)
 {
 	env.pushNode(node, "ConvertRowtypeExpr");
 
+	WRITE_NODE_FIELD(arg);
+	WRITE_OID_FIELD(resulttype);
+	WRITE_ENUM_FIELD(convertformat, CoercionForm);
+	WRITE_LOCATION_FIELD(location);
+
 	env.popNode();
 }
 
@@ -4773,6 +4942,10 @@ static void
 outputCollateExpr(NodeInfoEnv& env, const CollateExpr *node)
 {
 	env.pushNode(node, "CollateExpr");
+
+	WRITE_NODE_FIELD(arg);
+	WRITE_OID_FIELD(collOid);
+	WRITE_LOCATION_FIELD(location);
 
 	env.popNode();
 }
@@ -4927,6 +5100,9 @@ outputNullTest(NodeInfoEnv& env, const NullTest *node)
 	WRITE_NODE_FIELD(arg);
 	WRITE_ENUM_FIELD(nulltesttype, NullTestType);
 	WRITE_BOOL_FIELD(argisrow);
+#if PG_VERSION_NUM >= 90500
+	WRITE_LOCATION_FIELD(location);
+#endif
 
 	env.popNode();
 }
@@ -4938,6 +5114,9 @@ outputBooleanTest(NodeInfoEnv& env, const BooleanTest *node)
 
 	WRITE_NODE_FIELD(arg);
 	WRITE_ENUM_FIELD(booltesttype, BoolTestType);
+#if PG_VERSION_NUM >= 90500
+	WRITE_LOCATION_FIELD(location);
+#endif
 
 	env.popNode();
 }
@@ -5000,6 +5179,20 @@ outputCurrentOfExpr(NodeInfoEnv& env, const CurrentOfExpr *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 90500
+static void
+outputInferenceElem(NodeInfoEnv& env, const InferenceElem *node)
+{
+	env.pushNode(node, "InferenceElem");
+
+	WRITE_NODE_FIELD(expr);
+	WRITE_OID_FIELD(infercollid);
+	WRITE_OID_FIELD(inferopclass);
+
+	env.popNode();
+}
+#endif
 
 static void
 outputTargetEntry(NodeInfoEnv& env, const TargetEntry *node)
@@ -5082,6 +5275,8 @@ outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 	env.pushNode(node, "PlannerGlobal");
 
 	/* @todo ParamListInfo boundParams */
+	WRITE_POINTER_FIELD(boundParams);
+
 #if PG_VERSION_NUM < 90300
 	WRITE_NODE_FIELD(paramlist);
 #endif
@@ -5104,6 +5299,12 @@ outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 	WRITE_INDEX_FIELD(lastPHId);
 	WRITE_INDEX_FIELD(lastRowMarkId);
 	WRITE_BOOL_FIELD(transientPlan);
+
+#if PG_VERSION_NUM >= 90600
+	WRITE_BOOL_FIELD(dependsOnRole);
+	WRITE_BOOL_FIELD(parallelModeOK);
+	WRITE_BOOL_FIELD(parallelModeNeeded);
+#endif
 	
 	env.popNode();
 }
@@ -5121,6 +5322,10 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	WRITE_NODE_FIELD(parent_root);
 	WRITE_NODE_FIELD(plan_params);
 
+#if PG_VERSION_NUM >= 90600
+	WRITE_BITMAPSET_FIELD(outer_params);
+#endif
+
 	WRITE_INT_FIELD(simple_rel_array_size);
 
 	for (i=1 ; i<node->simple_rel_array_size ; i++)
@@ -5135,10 +5340,8 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 #endif
 	WRITE_NODE_FIELD(join_rel_list);
 
-#if 0
-	/* @todo */
-	struct HTAB *join_rel_hash; /* optional hashtable for join relations */
-#endif
+	/* @todo struct HTAB *join_rel_hash */
+	WRITE_POINTER_FIELD(join_rel_hash);
 
 	WRITE_INT_FIELD(join_cur_level);
 
@@ -5165,17 +5368,39 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	WRITE_NODE_FIELD(append_rel_list);
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_NODE_FIELD(placeholder_list);
+#if PG_VERSION_NUM >= 90600
+	WRITE_NODE_FIELD(fkey_list);
+#endif
 	WRITE_NODE_FIELD(query_pathkeys);
 	WRITE_NODE_FIELD(group_pathkeys);
 	WRITE_NODE_FIELD(window_pathkeys);
 	WRITE_NODE_FIELD(distinct_pathkeys);
 	WRITE_NODE_FIELD(sort_pathkeys);
-#if PG_VERSION_NUM >= 90100
+#if PG_VERSION_NUM < 90600 && PG_VERSION_NUM >= 90100
 	WRITE_NODE_FIELD(minmax_aggs);
 #endif
 	WRITE_NODE_FIELD(initial_rels);
+
 #if 0
+	/* @todo */
 	MemoryContext planner_cxt;	/* context holding PlannerInfo */
+	List	   *upper_rels[UPPERREL_FINAL + 1]; /* upper-rel RelOptInfos */
+#endif
+
+#if PG_VERSION_NUM >= 90600
+	WRITE_NODE_FIELD(processed_tlist);
+#endif
+
+#if PG_VERSION_NUM >= 90500
+	WRITE_NODE_FIELD(grouping_map);
+#endif
+#if PG_VERSION_NUM >= 90600
+	WRITE_NODE_FIELD(minmax_aggs);
+#endif
+
+#if 0
+	/* @todo */
+	struct PathTarget *upper_targets[UPPERREL_FINAL + 1];	
 #endif
 	WRITE_FLOAT_FIELD(total_table_pages, "%f");
 	WRITE_FLOAT_FIELD(tuple_fraction, "%f");
@@ -5194,22 +5419,20 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	WRITE_BOOL_FIELD(hasPseudoConstantQuals);
 	WRITE_BOOL_FIELD(hasRecursion);
 	WRITE_INT_FIELD(wt_param_id);
+#if PG_VERSION_NUM >= 90600
+	/* @todo struct Path *non_recursive_path */
+	WRITE_POINTER_FIELD(non_recursive_path);
+#else
 	WRITE_NODE_FIELD(non_recursive_plan);
+#endif
 #if PG_VERSION_NUM >= 90100
 	WRITE_BITMAPSET_FIELD(curOuterRels);
 	WRITE_NODE_FIELD(curOuterParams);
 #endif
 
-#if 0
-	/* @todo */
-	void	   *join_search_private;	
-#endif
+	/* @todo void * join_search_private */
+	WRITE_POINTER_FIELD(join_search_private);
 
-#if 0
-	/* @todo */
-	WRITE_NODE_FIELD(grouping_map);
-#endif
-  
 	env.popNode();
 }
 
@@ -5223,21 +5446,39 @@ outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 	WRITE_ENUM_FIELD(reloptkind, RelOptKind);
 	WRITE_BITMAPSET_FIELD(relids);
 	WRITE_FLOAT_FIELD(rows, "%f");
+#if PG_VERSION_NUM < 90600
 	WRITE_INT_FIELD(width);
+#endif
+
 #if PG_VERSION_NUM >= 90300
 	WRITE_BOOL_FIELD(consider_startup);
 #endif
+#if PG_VERSION_NUM >= 90600
+	WRITE_BOOL_FIELD(consider_param_startup);
+	WRITE_BOOL_FIELD(consider_parallel);
+#endif
+
+#if PG_VERSION_NUM >= 90600
+	/* @todo struct PathTarget *reltarget */
+	WRITE_POINTER_FIELD(reltarget);
+#else
 	WRITE_NODE_FIELD(reltargetlist);
+#endif
+
 	WRITE_NODE_FIELD(pathlist);
 #if PG_VERSION_NUM >= 90200
 	WRITE_NODE_FIELD(ppilist);
 #endif
-
 	WRITE_NODE_FIELD(cheapest_startup_path);
 	WRITE_NODE_FIELD(cheapest_total_path);
 	WRITE_NODE_FIELD(cheapest_unique_path);
 #if PG_VERSION_NUM >= 90200
 	WRITE_NODE_FIELD(cheapest_parameterized_paths);
+#endif
+
+#if PG_VERSION_NUM >= 90600
+	WRITE_BITMAPSET_FIELD(direct_lateral_relids);
+	WRITE_BITMAPSET_FIELD(lateral_relids);
 #endif
 
 	WRITE_INDEX_FIELD(relid);
@@ -5263,9 +5504,16 @@ outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 #if PG_VERSION_NUM >= 90200
 	WRITE_FLOAT_FIELD(allvisfrac, "%f");
 #endif
-	WRITE_NODE_FIELD(subplan);
 
-#if PG_VERSION_NUM >= 90300
+#if PG_VERSION_NUM < 90600
+	WRITE_NODE_FIELD(subplan);
+#endif
+
+#if PG_VERSION_NUM >= 90600
+	WRITE_NODE_FIELD(subroot);
+	WRITE_NODE_FIELD(subplan_params);
+	WRITE_INT_FIELD(rel_parallel_workers);
+#elif PG_VERSION_NUM >= 90300
 	WRITE_NODE_FIELD(subroot);
 	WRITE_NODE_FIELD(subplan_params);
 #elif PG_VERSION_NUM >= 90200
@@ -5275,17 +5523,21 @@ outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 	WRITE_NODE_FIELD(subrowmark);
 #endif
 
-#if PG_VERSION_NUM >= 90200
-	WRITE_NODE_FIELD(fdwroutine);
+#if PG_VERSION_NUM >= 90600
+	WRITE_OID_FIELD(serverid);
+	WRITE_OID_FIELD(userid);
+	WRITE_OID_FIELD(useridiscurrent);
 #endif
 
-#if 0
-	/* @todo */
-	/* void       *fdw_private */
+#if PG_VERSION_NUM >= 90200
+	WRITE_NODE_FIELD(fdwroutine);
+
+	/* @todo void *fdw_private */
+	WRITE_POINTER_FIELD(fdw_private);
 #endif
 
 	WRITE_NODE_FIELD(baserestrictinfo);
-	/* @todo QualCost baserestrictcost */
+	WRITE_QUALCOST_FIELD(baserestrictcost);
 	WRITE_NODE_FIELD(joininfo);
 	WRITE_BOOL_FIELD(has_eclass_joins);
 
@@ -5321,15 +5573,21 @@ outputQuery(NodeInfoEnv& env, const Query *node)
 	WRITE_BOOL_FIELD(hasModifyingCTE);
 #endif
 	WRITE_BOOL_FIELD(hasForUpdate);
+#if PG_VERSION_NUM >= 90500
+	WRITE_BOOL_FIELD(hasRowSecurity);
+#endif
 	WRITE_NODE_FIELD(cteList);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(jointree);
 	WRITE_NODE_FIELD(targetList);
-#if PG_VERSION_NUM >= 90400
-	WRITE_NODE_FIELD(withCheckOptions);
+#if PG_VERSION_NUM >= 90500
+	WRITE_NODE_FIELD(onConflict);
 #endif
 	WRITE_NODE_FIELD(returningList);
 	WRITE_NODE_FIELD(groupClause);
+#if PG_VERSION_NUM >= 90500
+	WRITE_NODE_FIELD(groupingSets);
+#endif
 	WRITE_NODE_FIELD(havingQual);
 	WRITE_NODE_FIELD(windowClause);
 	WRITE_NODE_FIELD(distinctClause);
@@ -5340,6 +5598,9 @@ outputQuery(NodeInfoEnv& env, const Query *node)
 	WRITE_NODE_FIELD(setOperations);
 #if PG_VERSION_NUM >= 90100
 	WRITE_NODE_FIELD(constraintDeps);
+#endif
+#if PG_VERSION_NUM >= 90400
+	WRITE_NODE_FIELD(withCheckOptions);
 #endif
 
 	env.popNode();
@@ -5422,6 +5683,9 @@ outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 #if PG_VERSION_NUM >= 90100
 			WRITE_CHAR_FIELD(relkind);
 #endif
+#if PG_VERSION_NUM >= 90500
+			WRITE_NODE_FIELD(tablesample);
+#endif
 			break;
 		case RTE_SUBQUERY:
 			WRITE_NODE_FIELD(subquery);
@@ -5477,10 +5741,11 @@ outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 	WRITE_UINT_FIELD(requiredPerms);
 	WRITE_OID_FIELD(checkAsUser);
 	WRITE_BITMAPSET_FIELD(selectedCols);
-#if PG_VERSION_NUM < 90500
-	WRITE_BITMAPSET_FIELD(modifiedCols);	
-#else
+#if PG_VERSION_NUM >= 90500
+	WRITE_BITMAPSET_FIELD(insertedCols);
 	WRITE_BITMAPSET_FIELD(updatedCols);
+#else
+	WRITE_BITMAPSET_FIELD(modifiedCols);	
 #endif
 #if PG_VERSION_NUM >= 90400
 	WRITE_NODE_FIELD(securityQuals);
