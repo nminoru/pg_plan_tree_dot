@@ -12,13 +12,15 @@ include $(PGXS)
 
 # CFLAGS += -DCUSTOM_PLAN
 
-COMPILER = $(CXX) $(CFLAGS)
+CXXFLAGS = $(filter-out -Wmissing-prototypes -Wdeclaration-after-statement -fexcess-precision=standard%, $(CFLAGS))
+
+COMPILER = $(CXX) $(CXXFLAGS)
 
 %.o : %.cpp
 ifdef DEPDIR
 	@if test ! -d $(DEPDIR); then mkdir -p $(DEPDIR); fi
-	$(CXX) $(CFLAGS) $(CPPFLAGS) -c -o $@ $< -MMD -MP -MF $(DEPDIR)/$(*F).Po
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $< -MMD -MP -MF $(DEPDIR)/$(*F).Po
 else
-	$(CXX) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 endif
 
