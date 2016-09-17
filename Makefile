@@ -4,7 +4,7 @@ MODULE_big = pg_plan_tree_dot
 OBJS = pg_plan_tree_dot.o plan_tree_view.o 
 
 EXTENSION = pg_plan_tree_dot
-DATA = pg_plan_tree_dot--1.0.sql pg_plan_tree_dot--unpackaged--1.0.sql
+DATA = pg_plan_tree_dot--1.1.sql pg_plan_tree_dot--1.0--1.1.sql pg_plan_tree_dot--unpackaged--1.0.sql
 
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)

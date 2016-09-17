@@ -2,7 +2,7 @@
  *
  * pg_plan_tree_dot.c
  *
- * Copyright (c) 2014 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014-2016 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -31,76 +31,8 @@ PG_MODULE_MAGIC;
 
 extern void _PG_init(void);
 
-static void output_sql_query(const char *sql, const char *filename, bool plan_state);
-static void output_plan_tree(const char *title, const char *sql, const void *obj, FILE *file);
-
-
-#if 0
-
-static bool plan_tree_view_enabled;
-static bool plan_tree_view_one_shot_trigger;
-static planner_hook_type add_planner_hook;
-
-
-static PlannedStmt *plan_tree_view_planner(Query *parse, int cursorOptions, ParamListInfo boundParams);
-
-
-void
-_PG_init(void)
-{
-	if (plan_tree_view_enabled)
-		return;
-
-	add_planner_hook   = planner_hook;
-	planner_hook       = plan_tree_view_planner;
-
-	plan_tree_view_enabled = true;
-}
-
-/*
- *
- */
-static PlannedStmt *
-plan_tree_view_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
-{
-	PlannedStmt *result;
-
-	if (!plan_tree_view_enabled || !plan_tree_view_one_shot_trigger)
-		return standard_planner(parse, cursorOptions, boundParams);
-
-	plan_tree_view_one_shot_trigger = false;
-
-	output_elog_node(LOG, "Query Tree", parse);
-
-	if (add_planner_hook)
-		result = (*add_planner_hook)(parse, cursorOptions, boundParams);
-	else
-		result = standard_planner(parse, cursorOptions, boundParams);
-
-	output_elog_node(LOG, "Plan Tree", result);
-
-	return result;
-}
-
-
-/*
- *
- */
-PG_FUNCTION_INFO_V1(trigger_plan_tree_view);
-Datum
-trigger_plan_tree_view(PG_FUNCTION_ARGS)
-{
-	if (!plan_tree_view_enabled)
-		ereport(ERROR,
-				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("plan_tree_view must be loaded via shared_preload_libraries"),
-				 errhint("Set shared_preload_libraries = 'custom_plan_for_vci' in postgresql.conf")));
-
-	plan_tree_view_one_shot_trigger = true;
-
-	PG_RETURN_VOID();
-}
-#endif
+static void output_sql_query(const char *sql, const char *filename, bool simplify);
+static void output_plan_tree(const char *title, const char *sql, const void *obj, FILE *file,  bool simplify);
 
 /*
  *
@@ -111,10 +43,12 @@ generate_plan_tree_dot(PG_FUNCTION_ARGS)
 {
 	text *sql, *filename;
 	char *sql_str, *filename_str;
+	bool  simplify;
 	MemoryContext tempcontext, oldcontext;
 
 	sql			= PG_GETARG_TEXT_P(0);
 	filename	= PG_GETARG_TEXT_P(1);
+	simplify	= PG_GETARG_BOOL(2);
 
 	tempcontext = AllocSetContextCreate(CurrentMemoryContext,
 										"print_plan_tree temporary context",
@@ -127,43 +61,7 @@ generate_plan_tree_dot(PG_FUNCTION_ARGS)
 	sql_str			= TextDatumGetCString(sql);
 	filename_str	= TextDatumGetCString(filename);
 
-	output_sql_query(sql_str, filename_str, false);
-
-	pfree(filename_str);
-	pfree(sql_str);
-
-	MemoryContextSwitchTo(oldcontext);
-	MemoryContextDelete(tempcontext);
-
-	PG_RETURN_VOID();
-}
-
-/*
- *
- */
-PG_FUNCTION_INFO_V1(generate_plan_state_tree_dot);
-Datum
-generate_plan_state_tree_dot(PG_FUNCTION_ARGS)
-{
-	text *sql, *filename;
-	char *sql_str, *filename_str;
-	MemoryContext tempcontext, oldcontext;
-
-	sql			= PG_GETARG_TEXT_P(0);
-	filename	= PG_GETARG_TEXT_P(1);
-
-	tempcontext = AllocSetContextCreate(CurrentMemoryContext,
-										"print_plan_tree temporary context",
-										ALLOCSET_DEFAULT_MINSIZE,
-										ALLOCSET_DEFAULT_INITSIZE,
-										ALLOCSET_DEFAULT_MAXSIZE);
-
-	oldcontext = MemoryContextSwitchTo(tempcontext);
-
-	sql_str			= TextDatumGetCString(sql);
-	filename_str	= TextDatumGetCString(filename);
-
-	output_sql_query(sql_str, filename_str, true);
+	output_sql_query(sql_str, filename_str, simplify);
 
 	pfree(filename_str);
 	pfree(sql_str);
@@ -178,7 +76,7 @@ generate_plan_state_tree_dot(PG_FUNCTION_ARGS)
  *
  */
 static void
-output_sql_query(const char *sql, const char *filename, bool plan_state)
+output_sql_query(const char *sql, const char *filename, bool simplify)
 {
 	List		   *raw_parsetree_list;
 	DestReceiver   *dest;
@@ -219,14 +117,7 @@ output_sql_query(const char *sql, const char *filename, bool plan_state)
 										GetActiveSnapshot(), NULL,
 										dest, NULL, 0);
 				
-				if (plan_state)
-				{
-					ExecutorStart(qdesc, 0);
-					/* qdesc->estate->es_subplanstates */
-					output_plan_tree("Plan State Tree", sql, qdesc->planstate, file);
-				}
-				else
-					output_plan_tree("Plan Tree", sql, qdesc->plannedstmt, file);
+				output_plan_tree("Plan Tree", sql, qdesc->plannedstmt, file, simplify);
 
 				FreeQueryDesc(qdesc);
 			}
@@ -240,7 +131,7 @@ output_sql_query(const char *sql, const char *filename, bool plan_state)
  *
  */
 static void
-output_plan_tree(const char *title, const char *sql, const void *obj, FILE *file)
+output_plan_tree(const char *title, const char *sql, const void *obj, FILE *file, bool simplify)
 {
 	char *p, *buffer, *result;
 
@@ -267,7 +158,7 @@ output_plan_tree(const char *title, const char *sql, const void *obj, FILE *file
 		}
 	}
 
-	result = get_plan_tree_dot_string(buffer, obj);
+	result = get_plan_tree_dot_string(buffer, obj, simplify);
 
 	if (result)
 	{

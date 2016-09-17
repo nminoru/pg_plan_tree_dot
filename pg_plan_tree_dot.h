@@ -2,7 +2,7 @@
  *
  * pg_plan_tree_dot.h
  *
- * Copyright (c) 2014 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014-2016 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-extern char *get_plan_tree_dot_string(const char *title, const void *obj);
+extern char *get_plan_tree_dot_string(const char *title, const void *obj, bool simplify);
 
 #ifdef __cplusplus
 };

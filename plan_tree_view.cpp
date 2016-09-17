@@ -56,7 +56,7 @@ extern "C" {
 	do {env.registerExprTree(node->fldname); findNode(env, node, #fldname, node->fldname);} while (0)
 
 #define FIND_TARGETLIST(fldname) \
-	do {env.registerTargetList(node->fldname); findNode(env, node, #fldname, node->fldname);} while (0)
+	do {env.registerTargetList(node->fldname); findNode(env, node, #fldname, node->fldname, true);} while (0)
 
 /* Write an integer field (anything written as ":fldname %d") */
 #define WRITE_INT_FIELD(fldname) \
@@ -145,14 +145,18 @@ class NodeInfoEnv {
 	std::string		label;
 	std::string		buffer;
 
-	NodeSet			tlist_head_set;
+	NodeSet			tlist_head_set;	/* target list */
+	NodeSet			passthrough_tlist_head_set;	/* passthrough target list */
+
 	NodeSet			exprtree_head_set;
 	int				num_subgraph;
 
+	bool			simplify;
+
 public:
-	NodeInfoEnv(const char *str) :
+	NodeInfoEnv(const char *str, bool _simplify) :
 		node_id_map(), edge_map(), node_id(0), label(str), buffer(),
-		tlist_head_set(), exprtree_head_set(), num_subgraph(0) {}
+		tlist_head_set(), passthrough_tlist_head_set(), exprtree_head_set(), num_subgraph(0), simplify(_simplify) {}
 
 	bool hasNode(const void *node) const
 	{
@@ -162,6 +166,11 @@ public:
 	void registerTargetList(const void *node)
 	{
 		tlist_head_set.insert(node);
+	}
+
+	void registerPassThroughTargetList(const void *node)
+	{
+		passthrough_tlist_head_set.insert(node);
 	}
 
 	void registerExprTree(const void *node)
@@ -1083,11 +1092,18 @@ public:
 			}
 		}
 	}
+
+	bool canSimplify() const { return simplify; }
+
+	bool has_passthrough_tlist(const void *obj) const
+	{
+		return passthrough_tlist_head_set.find(obj) != passthrough_tlist_head_set.end();
+	}
 };
 
 
 /* static void _outNode(StringInfo str, const void *obj); */
-static void findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *obj);
+static void findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *obj, bool from_tlist = false);
 static void findNodeIndex(NodeInfoEnv& env, const void *parent, const char *fldname, int index, const void *obj);
 static void findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void findPlan(NodeInfoEnv& env, const Plan *node);
@@ -1351,14 +1367,16 @@ static void outputGroupingSet(NodeInfoEnv& env, const GroupingSet *node);
 #endif
 static void outputWindowClause(NodeInfoEnv& env, const WindowClause *node);
 
+static bool is_passthrough_tlist(List *tlist);
+
 char *
-get_plan_tree_dot_string(const char *title, const void *obj)
+get_plan_tree_dot_string(const char *title, const void *obj, bool simplify)
 {
 	char *buffer = NULL;
 
 	try
 	{
-		NodeInfoEnv env(title);
+		NodeInfoEnv env(title, simplify);
 
 		findNode(env, NULL, NULL, obj);
 		env.outputAllNodes();
@@ -1378,7 +1396,7 @@ get_plan_tree_dot_string(const char *title, const void *obj)
 /*                                                                          */
 /****************************************************************************/
 static void
-findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *obj)
+findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *obj, bool from_tlist)
 {
 	if (obj == NULL)
 		return;
@@ -1406,6 +1424,12 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		int i = 0;
 		List *node = reinterpret_cast<List*>(const_cast<void*>(obj)); /* const List * にすると 9.1 以前でエラーが出る */
 		ListCell *lc;
+
+		if (from_tlist && env.canSimplify() && is_passthrough_tlist(reinterpret_cast<List *>(const_cast<void *>(obj))))
+		{
+			env.registerPassThroughTargetList(obj);
+			return;
+		}
 
 		foreach(lc, node)
 		{
@@ -3099,6 +3123,17 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		IsA(obj, OidList))
 	{
 		outputValue(env, reinterpret_cast<const Value*>(obj));
+		return;
+	}
+
+	if (env.has_passthrough_tlist(obj))
+	{
+		env.pushNode(obj, "Pseudo Node");
+
+		env.append("|(pass through target list)");
+
+		env.popNode();
+
 		return;
 	}
 
@@ -5771,3 +5806,38 @@ outputRangeTblFunction(NodeInfoEnv& env, const RangeTblFunction *node)
 	env.popNode();	
 }
 #endif
+
+
+/****************************************************************************/
+/*                                                                          */
+/****************************************************************************/
+
+static bool
+is_passthrough_tlist(List *tlist)
+{
+	ListCell   *tl;
+	AttrNumber attno = 1;
+
+	foreach(tl, tlist)
+	{
+		TargetEntry *tle;
+		Var *var;
+
+		tle = (TargetEntry	*) lfirst(tl);
+
+		if (!tle->expr || !IsA(tle->expr, Var))
+			return false;
+
+		var = (Var *) tle->expr;
+
+		if (var->varno != OUTER_VAR)
+			return false;
+
+		if (var->varattno != attno)
+			return false;
+
+		attno++;
+	}
+
+	return true;
+}
