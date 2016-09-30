@@ -12,7 +12,8 @@ include $(PGXS)
 
 # CFLAGS += -DCUSTOM_PLAN
 
-CXXFLAGS = $(filter-out -Wmissing-prototypes -Wdeclaration-after-statement -fexcess-precision=standard%, $(CFLAGS))
+CXXFLAGS = $(filter-out -Wmissing-prototypes -Wdeclaration-after-statement -fexcess-precision=standard%, $(CFLAGS)) \
+	-Wno-missing-format-attribute 
 
 COMPILER = $(CXX) $(CXXFLAGS)
 
