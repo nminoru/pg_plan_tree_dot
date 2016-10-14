@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS pg_plan_tree_dot;
 DROP TABLE IF EXISTS employee;
 
 CREATE TABLE employee (
-       ID         int PRIMARY KEY,
+       ID         int,
        name       varchar(10),
        salary     real,
        start_date date,
@@ -20,9 +20,8 @@ INSERT INTO employee VALUES (7,  'Alison',90620,  '00/08/07', 'New York', 'W');
 INSERT INTO employee VALUES (8,  'Chris', 26020,  '01/07/08', 'Vancouver','N');
 INSERT INTO employee VALUES (9,  'Mary',  60020,  '02/06/09', 'Toronto',  'W');
 
-SET enable_hashagg = off;
+--- SELECT city, ID, salary, rank() OVER (PARTITION BY city ORDER BY salary DESC), rank() OVER (PARTITION BY region ORDER BY name) FROM employee;
 
---- SELECT region FROM employee GROUP BY region;
-SELECT generate_plan_tree_dot('SELECT region FROM employee GROUP BY region HAVING region = 'W'', 'sample-only-group.dot');
+SELECT generate_plan_tree_dot('SELECT city, ID, salary, rank() OVER (PARTITION BY city ORDER BY salary DESC), rank() OVER (PARTITION BY region ORDER BY name) FROM employee;', 'sample-window-function2.dot');
 
 DROP TABLE employee;

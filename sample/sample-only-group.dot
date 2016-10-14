@@ -1,0 +1,70 @@
+digraph {
+graph [rankdir = "LR", label = "Plan Tree: SELECT region FROM employee GROUP BY region;"]
+node  [shape=record,style=filled,fillcolor=gray95]
+edge  [arrowtail=empty]
+16[label = "<head> Alias (16)|aliasname: employee|<colnames> colnames: "]
+18[label = "<head> String (18)|id"]
+17[label = "<head> List (17)|<1> [0]|<2> [1]|<3> [2]|<4> [3]|<5> [4]|<6> [5]"]
+19[label = "<head> String (19)|name"]
+20[label = "<head> String (20)|salary"]
+21[label = "<head> String (21)|start_date"]
+22[label = "<head> String (22)|city"]
+23[label = "<head> String (23)|region"]
+6[label = "<head> Sort (6)|startup_cost: 46.87|total_cost: 48.49|plan_rows: 650|plan_width: 8|<targetlist> targetlist: |<lefttree> lefttree: |extParam: (b)|allParam: (b)|numCols: 1|sortColIdx: 1|sortOperators: 1058|collations: 100|nullsFirst: false"]
+15[label = "<head> RangeTblEntry(RTE) (15)|rtekind: RTE_RELATION|relid: 32185|relkind: 114|<eref> eref: |lateral: false|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 14)|insertedCols: (b)|updatedCols: (b)"]
+10[label = "<head> SeqScan (10)|startup_cost: 0.00|total_cost: 16.50|plan_rows: 650|plan_width: 8|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 1"]
+2[label = "<head> Group (2)|startup_cost: 46.87|total_cost: 50.12|plan_rows: 200|plan_width: 8|<targetlist> targetlist: |<lefttree> lefttree: |extParam: (b)|allParam: (b)|numCols: 1|grpColIdx: 1|grpOperators: 1054"]
+14[label = "<head> List (14)|<1> [0]"]
+24[label = "<head> OidList (24)|32185 "]
+1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 0|hasRowSecurity: false"]
+
+16:colnames -> 17:head [headlabel = "16", taillabel = "17"]
+17:1 -> 18:head [headlabel = "17", taillabel = "18"]
+17:2 -> 19:head [headlabel = "17", taillabel = "19"]
+17:3 -> 20:head [headlabel = "17", taillabel = "20"]
+17:4 -> 21:head [headlabel = "17", taillabel = "21"]
+17:5 -> 22:head [headlabel = "17", taillabel = "22"]
+17:6 -> 23:head [headlabel = "17", taillabel = "23"]
+6:lefttree -> 10:head [headlabel = "6", taillabel = "10"]
+6:targetlist -> 7:head [headlabel = "6", taillabel = "7"]
+15:eref -> 16:head [headlabel = "15", taillabel = "16"]
+10:targetlist -> 11:head [headlabel = "10", taillabel = "11"]
+2:lefttree -> 6:head [headlabel = "2", taillabel = "6"]
+2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
+14:1 -> 15:head [headlabel = "14", taillabel = "15"]
+1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
+1:rtable -> 14:head [headlabel = "1", taillabel = "14"]
+1:relationOids -> 24:head [headlabel = "1", taillabel = "24"]
+
+subgraph cluster_0 {
+	label = "Target List";
+	12[label = "<head> TargetEntry (12)|<expr> expr: |resno: 1|resjunk: false"]
+	13[label = "<head> Var (13)|varno: 1|varattno: 6|vartype: 1042|vartypmod: 5|varcollid: 100|varlevelsup: 0|varnoold: 1|varoattno: 6|location: 7"]
+	11[label = "<head> List (11)|<1> [0]"]
+
+	12:expr -> 13:head [headlabel = "12", taillabel = "13"]
+	11:1 -> 12:head [headlabel = "11", taillabel = "12"]
+}
+
+subgraph cluster_1 {
+	label = "Target List";
+	7[label = "<head> List (7)|<1> [0]"]
+	9[label = "<head> Var (9)|varno: OUTER_VAR|varattno: 1|vartype: 1042|vartypmod: 5|varcollid: 100|varlevelsup: 0|varnoold: 1|varoattno: 6"]
+	8[label = "<head> TargetEntry (8)|<expr> expr: |resno: 1|resjunk: false"]
+
+	7:1 -> 8:head [headlabel = "7", taillabel = "8"]
+	8:expr -> 9:head [headlabel = "8", taillabel = "9"]
+}
+
+subgraph cluster_2 {
+	label = "Target List";
+	5[label = "<head> Var (5)|varno: OUTER_VAR|varattno: 1|vartype: 1042|vartypmod: 5|varcollid: 100|varlevelsup: 0|varnoold: 1|varoattno: 6|location: 7"]
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: region|ressortgroupref: 1|resorigtbl: 32185|resorigcol: 6|resjunk: false"]
+	3[label = "<head> List (3)|<1> [0]"]
+
+	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
+	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
+}
+
+}
+
