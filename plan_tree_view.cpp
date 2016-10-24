@@ -2393,9 +2393,15 @@ findParam(NodeInfoEnv& env, const Param *node)
 static void
 findAggref(NodeInfoEnv& env, const Aggref *node)
 {
+#if PG_VERSION_NUM >= 90400
+	FIND_NODE(aggdirectargs);
+#endif
 	FIND_NODE(args);
 	FIND_NODE(aggorder);
 	FIND_NODE(aggdistinct);
+#if PG_VERSION_NUM >= 90400
+	FIND_NODE(aggfilter);
+#endif
 }
 
 #if PG_VERSION_NUM >= 90500
