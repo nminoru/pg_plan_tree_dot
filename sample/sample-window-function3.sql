@@ -1,5 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS pg_plan_tree_dot;
 
+DROP TABLE IF EXISTS employee;
+
 CREATE TABLE employee (
        ID         int,
        name       varchar(10),
@@ -18,24 +20,8 @@ INSERT INTO employee VALUES (7,  'Alison',90620,  '00/08/07', 'New York', 'W');
 INSERT INTO employee VALUES (8,  'Chris', 26020,  '01/07/08', 'Vancouver','N');
 INSERT INTO employee VALUES (9,  'Mary',  60020,  '02/06/09', 'Toronto',  'W');
 
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
+--- SELECT city, ID, salary, rank() OVER (PARTITION BY city ORDER BY salary DESC), rank() OVER (PARTITION BY region ORDER BY name) FROM employee;
 
-CREATE INDEX ON employee (ID);
-
-ANALYZE;
-
---- SELECT ID, name FROM employee ORDER BY ID DESC LIMIT 5;
-
-SELECT generate_plan_tree_dot('SELECT ID, name FROM employee ORDER BY ID DESC LIMIT 5;', 'sample-sort2.dot');
+SELECT generate_plan_tree_dot('SELECT city, ID, salary, rank() OVER (PARTITION BY city ORDER BY salary DESC), rank() OVER (PARTITION BY region ORDER BY name) FROM employee;', 'sample-window-function3.dot');
 
 DROP TABLE employee;
-
-

@@ -20,21 +20,14 @@ INSERT INTO employee VALUES (9,  'Mary',  60020,  '02/06/09', 'Toronto',  'W');
 
 INSERT INTO employee SELECT * FROM employee;
 INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-INSERT INTO employee SELECT * FROM employee;
-
-CREATE INDEX ON employee (ID);
 
 ANALYZE;
 
---- SELECT ID, name FROM employee ORDER BY ID DESC LIMIT 5;
+SET enable_hashagg = off;
 
-SELECT generate_plan_tree_dot('SELECT ID, name FROM employee ORDER BY ID DESC LIMIT 5;', 'sample-sort2.dot');
+--- SELECT DISTINCT ID, name FROM employee;
+
+SELECT generate_plan_tree_dot('SELECT DISTINCT ID, name FROM employee;', 'sample-distinct.dot');
 
 DROP TABLE employee;
 

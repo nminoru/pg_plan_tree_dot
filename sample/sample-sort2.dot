@@ -1,47 +1,71 @@
 digraph {
-graph [rankdir = "LR", label = "Plan Tree: SELECT ID, name FROM employee ORDER BY ID;"]
+graph [rankdir = "LR", label = "Plan Tree: SELECT ID, name FROM employee ORDER BY ID DESC LIMIT 5;"]
 node  [shape=record,style=filled,fillcolor=gray95]
 edge  [arrowtail=empty]
-2[label = "<head> IndexScan (2)|startup_cost: 0.28|total_cost: 264.14|plan_rows: 4608|plan_width: 10|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 1|indexid: 32300|indexorderdir: ForwardScanDirection"]
-10[label = "<head> Alias (10)|aliasname: employee|<colnames> colnames: "]
-12[label = "<head> String (12)|id"]
-11[label = "<head> List (11)|<1> [0]|<2> [1]|<3> [2]|<4> [3]|<5> [4]|<6> [5]"]
-13[label = "<head> String (13)|name"]
-14[label = "<head> String (14)|salary"]
-15[label = "<head> String (15)|start_date"]
-16[label = "<head> String (16)|city"]
-17[label = "<head> String (17)|region"]
-9[label = "<head> RangeTblEntry(RTE) (9)|rtekind: RTE_RELATION|relid: 32297|relkind: 114|<eref> eref: |lateral: false|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10)|insertedCols: (b)|updatedCols: (b)"]
-8[label = "<head> List (8)|<1> [0]"]
-18[label = "<head> OidList (18)|32297 "]
+16[label = "<head> RangeTblEntry(RTE) (16)|rtekind: RTE_RELATION|relid: 32339|relkind: 114|<eref> eref: |lateral: false|inh: false|inFromCl: true|requiredPerms: 2|selectedCols: (b 9 10)|insertedCols: (b)|updatedCols: (b)"]
+17[label = "<head> Alias (17)|aliasname: employee|<colnames> colnames: "]
+8[label = "<head> IndexScan (8)|startup_cost: 0.28|total_cost: 264.14|plan_rows: 4608|plan_width: 10|<targetlist> targetlist: |extParam: (b)|allParam: (b)|scanrelid: 1|indexid: 32342|indexorderdir: BackwardScanDirection"]
+19[label = "<head> String (19)|id"]
+18[label = "<head> List (18)|<1> [0]|<2> [1]|<3> [2]|<4> [3]|<5> [4]|<6> [5]"]
+20[label = "<head> String (20)|name"]
+21[label = "<head> String (21)|salary"]
+22[label = "<head> String (22)|start_date"]
+23[label = "<head> String (23)|city"]
+24[label = "<head> String (24)|region"]
+2[label = "<head> Limit (2)|startup_cost: 0.28|total_cost: 0.57|plan_rows: 5|plan_width: 10|<targetlist> targetlist: |<lefttree> lefttree: |extParam: (b)|allParam: (b)|<limitCount> limitCount: "]
+15[label = "<head> List (15)|<1> [0]"]
+25[label = "<head> OidList (25)|32339 "]
 1[label = "<head> PlannedStmt (1)|commandType: CMD_SELECT|queryId: 0|hasReturning: false|hasModifyingCTE: false|canSetTag: true|transientPlan: false|<planTree> planTree: |<rtable> rtable: |rewindPlanIDs: (b)|<relationOids> relationOids: |nParamExec: 0|hasRowSecurity: false"]
 
+16:eref -> 17:head [headlabel = "16", taillabel = "17"]
+17:colnames -> 18:head [headlabel = "17", taillabel = "18"]
+8:targetlist -> 9:head [headlabel = "8", taillabel = "9"]
+18:1 -> 19:head [headlabel = "18", taillabel = "19"]
+18:2 -> 20:head [headlabel = "18", taillabel = "20"]
+18:3 -> 21:head [headlabel = "18", taillabel = "21"]
+18:4 -> 22:head [headlabel = "18", taillabel = "22"]
+18:5 -> 23:head [headlabel = "18", taillabel = "23"]
+18:6 -> 24:head [headlabel = "18", taillabel = "24"]
+2:lefttree -> 8:head [headlabel = "2", taillabel = "8"]
+2:limitCount -> 14:head [headlabel = "2", taillabel = "14"]
 2:targetlist -> 3:head [headlabel = "2", taillabel = "3"]
-10:colnames -> 11:head [headlabel = "10", taillabel = "11"]
-11:1 -> 12:head [headlabel = "11", taillabel = "12"]
-11:2 -> 13:head [headlabel = "11", taillabel = "13"]
-11:3 -> 14:head [headlabel = "11", taillabel = "14"]
-11:4 -> 15:head [headlabel = "11", taillabel = "15"]
-11:5 -> 16:head [headlabel = "11", taillabel = "16"]
-11:6 -> 17:head [headlabel = "11", taillabel = "17"]
-9:eref -> 10:head [headlabel = "9", taillabel = "10"]
-8:1 -> 9:head [headlabel = "8", taillabel = "9"]
+15:1 -> 16:head [headlabel = "15", taillabel = "16"]
 1:planTree -> 2:head [headlabel = "1", taillabel = "2"]
-1:rtable -> 8:head [headlabel = "1", taillabel = "8"]
-1:relationOids -> 18:head [headlabel = "1", taillabel = "18"]
+1:rtable -> 15:head [headlabel = "1", taillabel = "15"]
+1:relationOids -> 25:head [headlabel = "1", taillabel = "25"]
 
 subgraph cluster_0 {
 	label = "Target List";
-	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: id|ressortgroupref: 1|resorigtbl: 32297|resorigcol: 1|resjunk: false"]
-	7[label = "<head> Var (7)|varno: 1|varattno: 2|vartype: 1043|vartypmod: 14|varcollid: 100|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 11"]
-	6[label = "<head> TargetEntry (6)|<expr> expr: |resno: 2|resname: name|resorigtbl: 32297|resorigcol: 2|resjunk: false"]
-	5[label = "<head> Var (5)|varno: 1|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 7"]
+	10[label = "<head> TargetEntry (10)|<expr> expr: |resno: 1|resname: id|ressortgroupref: 1|resorigtbl: 32339|resorigcol: 1|resjunk: false"]
+	11[label = "<head> Var (11)|varno: 1|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1|location: 7"]
+	9[label = "<head> List (9)|<1> [0]|<2> [1]"]
+	12[label = "<head> TargetEntry (12)|<expr> expr: |resno: 2|resname: name|resorigtbl: 32339|resorigcol: 2|resjunk: false"]
+	13[label = "<head> Var (13)|varno: 1|varattno: 2|vartype: 1043|vartypmod: 14|varcollid: 100|varlevelsup: 0|varnoold: 1|varoattno: 2|location: 11"]
+
+	10:expr -> 11:head [headlabel = "10", taillabel = "11"]
+	9:1 -> 10:head [headlabel = "9", taillabel = "10"]
+	9:2 -> 12:head [headlabel = "9", taillabel = "12"]
+	12:expr -> 13:head [headlabel = "12", taillabel = "13"]
+}
+
+subgraph cluster_1 {
+	label = "Express Tree";
+	14[label = "<head> Const (14)|consttype: 20|consttypmod: -1|constlen: 8|constbyval: true|constisnull: false"]
+
+}
+
+subgraph cluster_2 {
+	label = "Target List";
+	5[label = "<head> Var (5)|varno: OUTER_VAR|varattno: 1|vartype: 23|vartypmod: -1|varlevelsup: 0|varnoold: 1|varoattno: 1"]
+	4[label = "<head> TargetEntry (4)|<expr> expr: |resno: 1|resname: id|ressortgroupref: 1|resorigtbl: 32339|resorigcol: 1|resjunk: false"]
 	3[label = "<head> List (3)|<1> [0]|<2> [1]"]
+	7[label = "<head> Var (7)|varno: OUTER_VAR|varattno: 2|vartype: 1043|vartypmod: 14|varcollid: 100|varlevelsup: 0|varnoold: 1|varoattno: 2"]
+	6[label = "<head> TargetEntry (6)|<expr> expr: |resno: 2|resname: name|resorigtbl: 32339|resorigcol: 2|resjunk: false"]
 
 	4:expr -> 5:head [headlabel = "4", taillabel = "5"]
-	6:expr -> 7:head [headlabel = "6", taillabel = "7"]
 	3:1 -> 4:head [headlabel = "3", taillabel = "4"]
 	3:2 -> 6:head [headlabel = "3", taillabel = "6"]
+	6:expr -> 7:head [headlabel = "6", taillabel = "7"]
 }
 
 }
