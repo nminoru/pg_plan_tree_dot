@@ -4207,7 +4207,7 @@ outputForeignScan(NodeInfoEnv& env, const ForeignScan *node)
 static void
 outputCustomScan(NodeInfoEnv& env, const CustomScan *node)
 {
-	env.pushNode(node, "ForeignScan");
+	env.pushNode(node, "CustomScan");
 
 	_outputScan(env, &node->scan);
 
