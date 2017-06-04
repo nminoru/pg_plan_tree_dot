@@ -2,7 +2,7 @@
  *
  * plan_tree_view.cpp
  *
- * Copyright (c) 2014-2016 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014-2017 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -4339,6 +4339,9 @@ outputAgg(NodeInfoEnv& env, const Agg *node)
 	_outputPlan(env, &node->plan);
 
 	WRITE_ENUM_FIELD(aggstrategy, AggStrategy);
+#if PG_VERSION_NUM >= 90600
+	WRITE_ENUM_FIELD(aggsplit, AggSplit);
+#endif
 	WRITE_INT_FIELD(numCols);
 
 	env.outputAttrNumberArray("grpColIdx", node->numCols, node->grpColIdx);
@@ -5343,6 +5346,9 @@ outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 	WRITE_INT_FIELD(nParamExec);
 	WRITE_INDEX_FIELD(lastPHId);
 	WRITE_INDEX_FIELD(lastRowMarkId);
+#if PG_VERSION_NUM >= 90600
+	WRITE_INT_FIELD(lastPlanNodeId);
+#endif
 	WRITE_BOOL_FIELD(transientPlan);
 
 #if PG_VERSION_NUM >= 90600
@@ -5428,8 +5434,14 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 
 #if 0
 	/* @todo */
+
 	MemoryContext planner_cxt;	/* context holding PlannerInfo */
+
+	/* Use fetch_upper_rel() to get any particular upper rel */
 	List	   *upper_rels[UPPERREL_FINAL + 1]; /* upper-rel RelOptInfos */
+
+	/* Result tlists chosen by grouping_planner for upper-stage processing */
+	struct PathTarget *upper_targets[UPPERREL_FINAL + 1];
 #endif
 
 #if PG_VERSION_NUM >= 90600
@@ -5443,10 +5455,6 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	WRITE_NODE_FIELD(minmax_aggs);
 #endif
 
-#if 0
-	/* @todo */
-	struct PathTarget *upper_targets[UPPERREL_FINAL + 1];	
-#endif
 	WRITE_FLOAT_FIELD(total_table_pages, "%f");
 	WRITE_FLOAT_FIELD(tuple_fraction, "%f");
 #if PG_VERSION_NUM >= 90100
@@ -5539,7 +5547,9 @@ outputRelOptInfo(NodeInfoEnv& env, const RelOptInfo *node)
 
 #if PG_VERSION_NUM >= 90300
 	WRITE_NODE_FIELD(lateral_vars);
+#if PG_VERSION_NUM < 90600
 	WRITE_BITMAPSET_FIELD(lateral_relids);
+#endif
 	WRITE_BITMAPSET_FIELD(lateral_referencers);
 #endif
 
