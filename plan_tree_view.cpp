@@ -460,6 +460,11 @@ public:
 			case AGG_HASHED:
 				append("AGG_HASHED");
 				break;
+#if PG_VERSION_NUM >= 100000
+			case AGG_MIXED:
+				append("AGG_MIXED");
+				break;
+#endif
 			default:
 				append("AggStrategy(Unknown: %d)", aggstrategy);
 				break;
@@ -539,6 +544,7 @@ public:
 		}
 	}
 
+#if PG_VERSION_NUM < 100000
 	void outputEnum(const char *fldname, InhOption inhOpt)
 	{
 		append("|%s: ", fldname);
@@ -558,6 +564,7 @@ public:
 				break;
 		}
 	}
+#endif
 
 	void outputEnum(const char *fldname, ParamKind paramkind)
 	{
@@ -688,12 +695,22 @@ public:
 			case RTE_FUNCTION:
 				append("RTE_FUNCTION");
 				break;
+#if PG_VERSION_NUM >= 100000
+			case RTE_TABLEFUNC:
+				append("RTE_TABLEFUNC");
+				break;
+#endif
 			case RTE_VALUES:
 				append("RTE_VALUES");
 				break;
 			case RTE_CTE:
 				append("RTE_CTE");
 				break;
+#if PG_VERSION_NUM >= 100000
+			case RTE_NAMEDTUPLESTORE:
+				append("RTE_NAMEDTUPLESTORE");
+				break;
+#endif
 			default:
 				append("RTEKind(Unknown: %d)", rtekind);
 				break;
@@ -1031,6 +1048,84 @@ public:
 	}
 #endif
 
+#if PG_VERSION_NUM >= 100000
+	void outputEnum(const char *fldname, OverridingKind override)
+	{
+		append("|%s: ", fldname);
+		switch (override)
+		{
+			case OVERRIDING_NOT_SET:
+				append("OVERRIDING_NOT_SET");
+				break;
+			case OVERRIDING_USER_VALUE:
+				append("OVERRIDING_USER_VALUE");
+				break;
+			case OVERRIDING_SYSTEM_VALUE:
+				append("OVERRIDING_SYSTEM_VALUE");
+				break;
+			default:
+				append("OverridingKind(Unknown: %d)", override);
+				break;
+		}
+	}
+
+	void outputEnum(const char *fldname, SQLValueFunctionOp op)
+	{
+		append("|%s: ", fldname);
+		switch (op)
+		{
+			case SVFOP_CURRENT_DATE:
+				append("SVFOP_CURRENT_DATE");
+				break;
+			case SVFOP_CURRENT_TIME:
+				append("SVFOP_CURRENT_TIME");
+				break;
+			case SVFOP_CURRENT_TIME_N:
+				append("SVFOP_CURRENT_TIME_N");
+				break;
+			case SVFOP_CURRENT_TIMESTAMP:
+				append("SVFOP_CURRENT_TIMESTAMP");
+				break;
+			case SVFOP_CURRENT_TIMESTAMP_N:
+				append("SVFOP_CURRENT_TIMESTAMP_N");
+				break;
+			case SVFOP_LOCALTIME:
+				append("SVFOP_LOCALTIME");
+				break;
+			case SVFOP_LOCALTIME_N:
+				append("SVFOP_LOCALTIME_N");
+				break;
+			case SVFOP_LOCALTIMESTAMP:
+				append("SVFOP_LOCALTIMESTAMP");
+				break;
+			case SVFOP_LOCALTIMESTAMP_N:
+				append("SVFOP_LOCALTIMESTAMP_N");
+				break;
+			case SVFOP_CURRENT_ROLE:
+				append("SVFOP_CURRENT_ROLE");
+				break;
+			case SVFOP_CURRENT_USER:
+				append("SVFOP_CURRENT_USER");
+				break;
+			case SVFOP_USER:
+				append("SVFOP_USER");
+				break;
+			case SVFOP_SESSION_USER:
+				append("SVFOP_SESSION_USER");
+				break;
+			case SVFOP_CURRENT_CATALOG:
+				append("SVFOP_CURRENT_CATALOG");
+				break;
+			case SVFOP_CURRENT_SCHEMA:
+				append("SVFOP_CURRENT_SCHEMA");
+				break;
+			default:
+				append("SQLValueFunctionOp(Unknown: %d)", op);
+				break;
+		}
+	}
+#endif
+
 	void outputOidArray(const char *fldname, int size, Oid* oidarray)
 	{
 		int i;
@@ -1112,6 +1207,9 @@ static void findNodeIndex(NodeInfoEnv& env, const void *parent, const char *fldn
 static void findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void findPlan(NodeInfoEnv& env, const Plan *node);
 static void   findResult(NodeInfoEnv& env, const Result *node);
+#if PG_VERSION_NUM >= 100000
+static void   findProjectSet(NodeInfoEnv& env, const ProjectSet *node);
+#endif
 static void   findModifyTable(NodeInfoEnv& env, const ModifyTable *node);
 static void   findAppend(NodeInfoEnv& env, const Append *node);
 #if PG_VERSION_NUM >= 90100
@@ -1135,7 +1233,13 @@ static void     findTidScan(NodeInfoEnv& env, const TidScan *node);
 static void     findSubqueryScan(NodeInfoEnv& env, const SubqueryScan *node);
 static void     findFunctionScan(NodeInfoEnv& env, const FunctionScan *node);
 static void     findValuesScan(NodeInfoEnv& env, const ValuesScan *node);
+#if PG_VERSION_NUM >= 100000
+static void     findTableFuncScan(NodeInfoEnv& env, const TableFuncScan *node);
+#endif
 static void     findCteScan(NodeInfoEnv& env, const CteScan *node);
+#if PG_VERSION_NUM >= 100000
+static void     findNamedTuplestoreScan(NodeInfoEnv& env, const NamedTuplestoreScan *node);
+#endif
 static void     findWorkTableScan(NodeInfoEnv& env, const WorkTableScan *node);
 #if PG_VERSION_NUM >= 90100
 static void     findForeignScan(NodeInfoEnv& env, const ForeignScan *node);
@@ -1156,6 +1260,9 @@ static void   findUnique(NodeInfoEnv& env, const Unique *node);
 #if PG_VERSION_NUM >= 90600
 static void   findGather(NodeInfoEnv& env, const Gather *node);
 #endif
+#if PG_VERSION_NUM >= 100000
+static void   findGatherMerge(NodeInfoEnv& env, const GatherMerge *node);
+#endif
 static void   findHash(NodeInfoEnv& env, const Hash *node);
 static void   findSetOp(NodeInfoEnv& env, const SetOp *node);
 static void   findLockRows(NodeInfoEnv& env, const LockRows *node);
@@ -1167,6 +1274,9 @@ static void   findPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node);
 static void   findPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node);
 static void   findAlias(NodeInfoEnv& env, const Alias *node);
 static void   findRangeVar(NodeInfoEnv& env, const RangeVar *node);
+#if PG_VERSION_NUM >= 100000
+static void   findTableFunc(NodeInfoEnv& env, const TableFunc *node);
+#endif
 static void   findIntoClause(NodeInfoEnv& env, const IntoClause *node);
 /* static void findExpr(NodeInfoEnv& env, const Expr *node); */
 static void   findVar(NodeInfoEnv& env, const Var *node);
@@ -1205,6 +1315,9 @@ static void   findRowExpr(NodeInfoEnv& env, const RowExpr *node);
 static void   findRowCompareExpr(NodeInfoEnv& env, const RowCompareExpr *node);
 static void   findCoalesceExpr(NodeInfoEnv& env, const CoalesceExpr *node);
 static void   findMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node);
+#if PG_VERSION_NUM >= 100000
+static void   findSQLValueFunction(NodeInfoEnv& env, const SQLValueFunction *node);
+#endif
 static void   findXmlExpr(NodeInfoEnv& env, const XmlExpr *node);
 static void   findNullTest(NodeInfoEnv& env, const NullTest *node);
 static void   findBooleanTest(NodeInfoEnv& env, const BooleanTest *node);
@@ -1221,6 +1334,9 @@ static void   findJoinExpr(NodeInfoEnv& env, const JoinExpr *node);
 static void   findFromExpr(NodeInfoEnv& env, const FromExpr *node);
 #if PG_VERSION_NUM >= 90500
 static void   findOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node);
+#endif
+#if PG_VERSION_NUM >= 100000
+static void   findNextValueExpr(NodeInfoEnv& env, const NextValueExpr *node);
 #endif
 static void findPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node);
 static void findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
@@ -1244,6 +1360,9 @@ static void outputValue(NodeInfoEnv& env, const Value *node);
 static void outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node);
 static void outputPlan(NodeInfoEnv& env, const Plan *node);
 static void   outputResult(NodeInfoEnv& env, const Result *node);
+#if PG_VERSION_NUM >= 100000
+static void   outputProjectSet(NodeInfoEnv& env, const ProjectSet *node);
+#endif
 static void   outputModifyTable(NodeInfoEnv& env, const ModifyTable *node);
 static void   outputAppend(NodeInfoEnv& env, const Append *node);
 #if PG_VERSION_NUM >= 90100
@@ -1267,7 +1386,13 @@ static void     outputTidScan(NodeInfoEnv& env, const TidScan *node);
 static void     outputSubqueryScan(NodeInfoEnv& env, const SubqueryScan *node);
 static void     outputFunctionScan(NodeInfoEnv& env, const FunctionScan *node);
 static void     outputValuesScan(NodeInfoEnv& env, const ValuesScan *node);
+#if PG_VERSION_NUM >= 100000
+static void     outputTableFuncScan(NodeInfoEnv& env, const TableFuncScan *node);
+#endif
 static void     outputCteScan(NodeInfoEnv& env, const CteScan *node);
+#if PG_VERSION_NUM >= 100000
+static void     outputNamedTuplestoreScan(NodeInfoEnv& env, const NamedTuplestoreScan *node);
+#endif
 static void     outputWorkTableScan(NodeInfoEnv& env, const WorkTableScan *node);
 #if PG_VERSION_NUM >= 90100
 static void     outputForeignScan(NodeInfoEnv& env, const ForeignScan *node);
@@ -1288,6 +1413,9 @@ static void   outputUnique(NodeInfoEnv& env, const Unique *node);
 #if PG_VERSION_NUM >= 90600
 static void   outputGather(NodeInfoEnv& env, const Gather *node);
 #endif
+#if PG_VERSION_NUM >= 100000
+static void   outputGatherMerge(NodeInfoEnv& env, const GatherMerge *node);
+#endif
 static void   outputHash(NodeInfoEnv& env, const Hash *node);
 static void   outputSetOp(NodeInfoEnv& env, const SetOp *node);
 static void   outputLockRows(NodeInfoEnv& env, const LockRows *node);
@@ -1299,6 +1427,9 @@ static void   outputPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node);
 static void   outputPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node);
 static void   outputAlias(NodeInfoEnv& env, const Alias *node);
 static void   outputRangeVar(NodeInfoEnv& env, const RangeVar *node);
+#if PG_VERSION_NUM >= 100000
+static void   outputTableFunc(NodeInfoEnv& env, const TableFunc *node);
+#endif
 static void   outputIntoClause(NodeInfoEnv& env, const IntoClause *node);
 /* static void outputExpr(NodeInfoEnv& env, const Expr *node); */
 static void   outputVar(NodeInfoEnv& env, const Var *node);
@@ -1337,6 +1468,9 @@ static void   outputRowExpr(NodeInfoEnv& env, const RowExpr *node);
 static void   outputRowCompareExpr(NodeInfoEnv& env, const RowCompareExpr *node);
 static void   outputCoalesceExpr(NodeInfoEnv& env, const CoalesceExpr *node);
 static void   outputMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node);
+#if PG_VERSION_NUM >= 100000
+static void   outputSQLValueFunction(NodeInfoEnv& env, const SQLValueFunction *node);
+#endif
 static void   outputXmlExpr(NodeInfoEnv& env, const XmlExpr *node);
 static void   outputNullTest(NodeInfoEnv& env, const NullTest *node);
 static void   outputBooleanTest(NodeInfoEnv& env, const BooleanTest *node);
@@ -1353,6 +1487,9 @@ static void   outputJoinExpr(NodeInfoEnv& env, const JoinExpr *node);
 static void   outputFromExpr(NodeInfoEnv& env, const FromExpr *node);
 #if PG_VERSION_NUM >= 90500
 static void   outputOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node);
+#endif
+#if PG_VERSION_NUM >= 100000
+static void   outputNextValueExpr(NodeInfoEnv& env, const NextValueExpr *node);
 #endif
 static void outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node);
 static void outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node);
@@ -1456,6 +1593,12 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 			findResult(env, reinterpret_cast<const Result*>(obj));
 			break;
 
+#if PG_VERSION_NUM >= 100000
+		case T_ProjectSet:
+			findProjectSet(env, reinterpret_cast<const ProjectSet*>(obj));
+			break;
+#endif
+
 #if 0
 		case T_Env:
 			findEnv(env, reinterpret_cast<const Env*>(obj));
@@ -1518,9 +1661,19 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_ValuesScan:
 			findValuesScan(env, reinterpret_cast<const ValuesScan*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_TableFuncScan:
+			findTableFuncScan(env, reinterpret_cast<const TableFuncScan*>(obj));
+			break;
+#endif
 		case T_CteScan:
 			findCteScan(env, reinterpret_cast<const CteScan*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_NamedTuplestoreScan:
+			findNamedTuplestoreScan(env, reinterpret_cast<const NamedTuplestoreScan*>(obj));
+			break;
+#endif
 		case T_WorkTableScan:
 			findWorkTableScan(env, reinterpret_cast<const WorkTableScan*>(obj));
 			break;
@@ -1569,6 +1722,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 			findGather(env, reinterpret_cast<const Gather*>(obj));
 			break;
 #endif
+#if PG_VERSION_NUM >= 100000
+		case T_GatherMerge:
+			findGatherMerge(env, reinterpret_cast<const GatherMerge*>(obj));
+			break;
+#endif
 		case T_Hash:
 			findHash(env, reinterpret_cast<const Hash*>(obj));
 			break;
@@ -1599,6 +1757,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_RangeVar:
 			findRangeVar(env, reinterpret_cast<const RangeVar*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_TableFunc:
+			findTableFunc(env, reinterpret_cast<const TableFunc*>(obj));
+			break;
+#endif
 		case T_IntoClause:
 			findIntoClause(env, reinterpret_cast<const IntoClause*>(obj));
 			break;
@@ -1702,6 +1865,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_MinMaxExpr:
 			findMinMaxExpr(env, reinterpret_cast<const MinMaxExpr*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_SQLValueFunction:
+			findSQLValueFunction(env, reinterpret_cast<const SQLValueFunction*>(obj));
+			break;
+#endif
 		case T_XmlExpr:
 			findXmlExpr(env, reinterpret_cast<const XmlExpr*>(obj));
 			break;
@@ -1743,6 +1911,11 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 #if PG_VERSION_NUM >= 90500
 		case T_OnConflictExpr:
 			findOnConflictExpr(env, reinterpret_cast<const OnConflictExpr*>(obj));
+			break;
+#endif
+#if PG_VERSION_NUM >= 100000
+		case T_NextValueExpr:
+			findNextValueExpr(env, reinterpret_cast<const NextValueExpr*>(obj));
 			break;
 #endif
 #if 0
@@ -2000,9 +2173,14 @@ findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	FIND_NODE(planTree);
 	FIND_NODE(rtable);
 	FIND_NODE(resultRelations);
+#if PG_VERSION_NUM >= 100000
+	FIND_NODE(nonleafResultRelations);
+	FIND_NODE(rootResultRelations);
+#else
 	FIND_NODE(utilityStmt);
 #if PG_VERSION_NUM < 90200
 	FIND_NODE(intoClause);
+#endif
 #endif
 	FIND_NODE(subplans);
 	FIND_NODE(rowMarks);
@@ -2027,10 +2205,21 @@ findResult(NodeInfoEnv& env, const Result *node)
 	FIND_NODE(resconstantqual);
 }
 
+#if PG_VERSION_NUM >= 100000
+static void
+findProjectSet(NodeInfoEnv& env, const ProjectSet *node)
+{
+	findPlan(env, &node->plan);
+}
+#endif
+
 static void
 findModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 {
 	findPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 100000
+	FIND_NODE(partitioned_rels);
+#endif
 	FIND_NODE(resultRelations);
 	FIND_NODE(plans);
 #if PG_VERSION_NUM >= 90400
@@ -2053,6 +2242,9 @@ static void
 findAppend(NodeInfoEnv& env, const Append *node)
 {
 	findPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 100000
+	FIND_NODE(partitioned_rels);
+#endif
 	FIND_NODE(appendplans);
 }
 
@@ -2061,6 +2253,9 @@ static void
 findMergeAppend(NodeInfoEnv& env, const MergeAppend *node)
 {
 	findPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 100000
+	FIND_NODE(partitioned_rels);
+#endif
 	FIND_NODE(mergeplans); /* list of plans */
 }
 #endif
@@ -2186,11 +2381,28 @@ findValuesScan(NodeInfoEnv& env, const ValuesScan *node)
 	FIND_NODE(values_lists);
 }
 
+#if PG_VERSION_NUM >= 100000
+static void
+findTableFuncScan(NodeInfoEnv& env, const TableFuncScan *node)
+{
+	findScan(env, &node->scan);
+	FIND_NODE(tablefunc);
+}
+#endif
+
 static void
 findCteScan(NodeInfoEnv& env, const CteScan *node)
 {
 	findScan(env, &node->scan);
 }
+
+#if PG_VERSION_NUM >= 100000
+static void
+findNamedTuplestoreScan(NodeInfoEnv& env, const NamedTuplestoreScan *node)
+{
+	findScan(env, &node->scan);
+}
+#endif
 
 static void
 findWorkTableScan(NodeInfoEnv& env, const WorkTableScan *node)
@@ -2306,6 +2518,14 @@ findGather(NodeInfoEnv& env, const Gather *node)
 }
 #endif
 
+#if PG_VERSION_NUM >= 100000
+static void
+findGatherMerge(NodeInfoEnv& env, const GatherMerge *node)
+{
+	findPlan(env, &node->plan);
+}
+#endif
+
 static void
 findHash(NodeInfoEnv& env, const Hash *node)
 {
@@ -2375,6 +2595,23 @@ findRangeVar(NodeInfoEnv& env, const RangeVar *node)
 {
 	/* nothing */
 }
+
+#if PG_VERSION_NUM >= 100000
+static void
+findTableFunc(NodeInfoEnv& env, const TableFunc *node)
+{
+	FIND_NODE(ns_uris);
+	FIND_NODE(ns_names);
+	FIND_NODE(docexpr);
+	FIND_NODE(rowexpr);
+	FIND_NODE(colnames);
+	FIND_NODE(coltypes);
+	FIND_NODE(coltypmods);
+	FIND_NODE(colcollations);
+	FIND_NODE(colexprs);
+	FIND_NODE(coldefexprs);
+}
+#endif
 
 static void
 findVar(NodeInfoEnv& env, const Var *node)
@@ -2603,6 +2840,14 @@ findMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node)
 	FIND_NODE(args);
 }
 
+#if PG_VERSION_NUM >= 100000
+static void
+findSQLValueFunction(NodeInfoEnv& env, const SQLValueFunction *node)
+{
+	/* nothing */
+}
+#endif
+
 static void
 findXmlExpr(NodeInfoEnv& env, const XmlExpr *node)
 {
@@ -2694,6 +2939,14 @@ findOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node)
 	FIND_NODE(onConflictSet);
 	FIND_NODE(onConflictWhere);
 	FIND_NODE(exclRelTlist);
+}
+#endif
+
+#if PG_VERSION_NUM >= 100000
+static void
+findNextValueExpr(NodeInfoEnv& env, const NextValueExpr *node)
+{
+	/* nothing */	
 }
 #endif
 
@@ -2936,15 +3189,25 @@ findRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 #endif
 #endif
 
+#if PG_VERSION_NUM >= 100000
+	FIND_NODE(tablefunc);
+#endif
+
 	FIND_NODE(values_lists);
-#if PG_VERSION_NUM >= 90100
+#if PG_VERSION_NUM >= 90100 && PG_VERSION_NUM < 100000
 	FIND_NODE(values_collations);
 #endif
 
+#if PG_VERSION_NUM >= 100000
+	FIND_NODE(coltypes);
+	FIND_NODE(coltypmods);
+	FIND_NODE(colcollations);
+#else
 	FIND_NODE(ctecoltypes);
 	FIND_NODE(ctecoltypmods);
 #if PG_VERSION_NUM >= 90100
 	FIND_NODE(ctecolcollations);
+#endif
 #endif
 
 	FIND_NODE(alias);
@@ -3178,6 +3441,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 			outputResult(env, reinterpret_cast<const Result*>(obj));
 			break;
 
+#if PG_VERSION_NUM >= 100000
+			outputProjectSet(env, reinterpret_cast<const ProjectSet*>(obj));
+			break;
+#endif
+
 #if 0
 		case T_Env:
 			outputEnv(env, reinterpret_cast<const Env*>(obj));
@@ -3240,9 +3508,19 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_ValuesScan:
 			outputValuesScan(env, reinterpret_cast<const ValuesScan*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_TableFuncScan:
+			outputTableFuncScan(env, reinterpret_cast<const TableFuncScan*>(obj));
+			break;
+#endif
 		case T_CteScan:
 			outputCteScan(env, reinterpret_cast<const CteScan*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_NamedTuplestoreScan:
+			outputNamedTuplestoreScan(env, reinterpret_cast<const NamedTuplestoreScan*>(obj));
+			break;
+#endif
 		case T_WorkTableScan:
 			outputWorkTableScan(env, reinterpret_cast<const WorkTableScan*>(obj));
 			break;
@@ -3291,6 +3569,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 			outputGather(env, reinterpret_cast<const Gather*>(obj));
 			break;
 #endif
+#if PG_VERSION_NUM >= 100000
+		case T_GatherMerge:
+			outputGatherMerge(env, reinterpret_cast<const GatherMerge*>(obj));
+			break;
+#endif
 		case T_Hash:
 			outputHash(env, reinterpret_cast<const Hash*>(obj));
 			break;
@@ -3320,6 +3603,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_RangeVar:
 			outputRangeVar(env, reinterpret_cast<const RangeVar*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_TableFunc:
+			outputTableFunc(env, reinterpret_cast<const TableFunc*>(obj));
+			break;
+#endif
 		case T_IntoClause:
 			outputIntoClause(env, reinterpret_cast<const IntoClause*>(obj));
 			break;
@@ -3423,6 +3711,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_MinMaxExpr:
 			outputMinMaxExpr(env, reinterpret_cast<const MinMaxExpr*>(obj));
 			break;
+#if PG_VERSION_NUM >= 100000
+		case T_SQLValueFunction:
+			outputSQLValueFunction(env, reinterpret_cast<const SQLValueFunction*>(obj));
+			break;
+#endif
 		case T_XmlExpr:
 			outputXmlExpr(env, reinterpret_cast<const XmlExpr*>(obj));
 			break;
@@ -3464,6 +3757,11 @@ outputNode(NodeInfoEnv& env, const void *obj)
 #if PG_VERSION_NUM >= 90500
 		case T_OnConflictExpr:
 			outputOnConflictExpr(env, reinterpret_cast<const OnConflictExpr*>(obj));
+			break;
+#endif
+#if PG_VERSION_NUM >= 100000
+		case T_NextValueExpr:
+			outputNextValueExpr(env, reinterpret_cast<const NextValueExpr*>(obj));
 			break;
 #endif
 #if 0
@@ -3714,6 +4012,9 @@ _outputPlan(NodeInfoEnv& env, const Plan *node)
 
 #if PG_VERSION_NUM >= 90600
 	WRITE_BOOL_FIELD(parallel_aware);
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(parallel_safe);
+#endif
 	WRITE_INT_FIELD(plan_node_id);
 #endif
 
@@ -3738,6 +4039,9 @@ _outputJoin(NodeInfoEnv& env, const Join *node)
 {
 	_outputPlan(env, &node->plan);
 	WRITE_ENUM_FIELD(jointype, JoinType);
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(inner_unique);
+#endif
 	WRITE_NODE_FIELD(joinqual);
 }
 
@@ -3847,9 +4151,14 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(resultRelations);
+#if PG_VERSION_NUM >= 100000
+	WRITE_NODE_FIELD(nonleafResultRelations);
+	WRITE_NODE_FIELD(rootResultRelations);
+#else
 	WRITE_NODE_FIELD(utilityStmt);
 #if PG_VERSION_NUM < 90200
 	WRITE_NODE_FIELD(intoClause);
+#endif
 #endif
 	WRITE_NODE_FIELD(subplans);
 	WRITE_BITMAPSET_FIELD(rewindPlanIDs);
@@ -3861,6 +4170,10 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	WRITE_BOOL_FIELD(hasRowSecurity);
 #endif
 
+#if PG_VERSION_NUM >= 100000
+	WRITE_LOCATION_FIELD(stmt_location);
+	WRITE_INT_FIELD(stmt_len);
+#endif
 	env.popNode();
 }
 
@@ -3885,6 +4198,18 @@ outputResult(NodeInfoEnv& env, const Result *node)
 	env.popNode();
 }
 
+#if PG_VERSION_NUM >= 100000
+static void
+outputProjectSet(NodeInfoEnv& env, const ProjectSet *node)
+{
+	env.pushNode(node, "ProjectSet");
+
+	_outputPlan(env, &node->plan);
+
+	env.popNode();
+}
+#endif
+
 static void
 outputModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 {
@@ -3898,9 +4223,15 @@ outputModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 #if PG_VERSION_NUM >= 90500
 	WRITE_INDEX_FIELD(nominalRelation);
 #endif
+#if PG_VERSION_NUM >= 100000
+	WRITE_NODE_FIELD(partitioned_rels);
+#endif
 	WRITE_NODE_FIELD(resultRelations);
 #if PG_VERSION_NUM >= 90100
 	WRITE_INT_FIELD(resultRelIndex);
+#endif
+#if PG_VERSION_NUM >= 100000
+	WRITE_INT_FIELD(rootResultRelIndex);
 #endif
 	WRITE_NODE_FIELD(plans);
 #if PG_VERSION_NUM >= 90400
@@ -3933,6 +4264,9 @@ outputAppend(NodeInfoEnv& env, const Append *node)
 	env.pushNode(node, "Append");
 
 	_outputPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 100000
+	WRITE_NODE_FIELD(partitioned_rels);
+#endif
 	WRITE_NODE_FIELD(appendplans);
 
 	env.popNode();
@@ -3945,6 +4279,9 @@ outputMergeAppend(NodeInfoEnv& env, const MergeAppend *node)
 	env.pushNode(node, "MergeAppend");
 
 	_outputPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 100000
+	WRITE_NODE_FIELD(partitioned_rels);
+#endif
 	WRITE_NODE_FIELD(mergeplans);
 	WRITE_INT_FIELD(numCols);
 	env.outputAttrNumberArray("sortColIdx", node->numCols, node->sortColIdx);
@@ -3988,6 +4325,9 @@ outputBitmapOr(NodeInfoEnv& env, const BitmapOr *node)
 	env.pushNode(node, "BitmapOr");
 
 	_outputPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(isshared);
+#endif
 	WRITE_NODE_FIELD(bitmapplans);
 
 	env.popNode();
@@ -4075,6 +4415,9 @@ outputBitmapIndexScan(NodeInfoEnv& env, const BitmapIndexScan *node)
 	_outputScan(env, &node->scan);
 
 	WRITE_OID_FIELD(indexid);
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(isshared);
+#endif
 	WRITE_NODE_FIELD(indexqual);
 	WRITE_NODE_FIELD(indexqualorig);
 
@@ -4152,6 +4495,20 @@ outputValuesScan(NodeInfoEnv& env, const ValuesScan *node)
 	env.popNode();
 }
 
+#if PG_VERSION_NUM >= 100000
+static void
+outputTableFuncScan(NodeInfoEnv& env, const TableFuncScan *node)
+{
+	env.pushNode(node, "TableFuncScan");
+
+	_outputScan(env, &node->scan);
+
+	WRITE_NODE_FIELD(tablefunc);
+
+	env.popNode();
+}
+#endif
+
 static void
 outputCteScan(NodeInfoEnv& env, const CteScan *node)
 {
@@ -4164,6 +4521,20 @@ outputCteScan(NodeInfoEnv& env, const CteScan *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 100000
+static void
+outputNamedTuplestoreScan(NodeInfoEnv& env, const NamedTuplestoreScan *node)
+{
+	env.pushNode(node, "NamedTuplestoreScan");
+
+	_outputScan(env, &node->scan);
+
+	WRITE_STRING_FIELD(enrname);
+
+	env.popNode();
+}
+#endif
 
 static void
 outputWorkTableScan(NodeInfoEnv& env, const WorkTableScan *node)
@@ -4260,6 +4631,10 @@ outputMergeJoin(NodeInfoEnv& env, const MergeJoin *node)
 	env.pushNode(node, "MergeJoin");
 
 	_outputJoin(env, &node->join);
+
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(skip_mark_restore);
+#endif
 
 	WRITE_NODE_FIELD(mergeclauses);
 
@@ -4417,6 +4792,25 @@ outputGather(NodeInfoEnv& env, const Gather *node)
 }
 #endif
 
+#if PG_VERSION_NUM >= 100000
+static void
+outputGatherMerge(NodeInfoEnv& env, const GatherMerge *node)
+{
+	env.pushNode(node, "GatherMerge");
+
+	_outputPlan(env, &node->plan);
+
+	WRITE_INT_FIELD(num_workers);
+
+	env.outputAttrNumberArray("sortColIdx", node->numCols, node->sortColIdx);
+	env.outputOidArray("sortOperators", node->numCols, node->sortOperators);
+	env.outputOidArray("collations", node->numCols, node->collations);
+	env.outputBoolArray("nullsFirst", node->numCols, node->nullsFirst);
+
+	env.popNode();
+}
+#endif
+
 static void
 outputHash(NodeInfoEnv& env, const Hash *node)
 {
@@ -4427,8 +4821,10 @@ outputHash(NodeInfoEnv& env, const Hash *node)
 	WRITE_OID_FIELD(skewTable);
 	WRITE_ATTRNUMBER_FIELD(skewColumn);
 	WRITE_BOOL_FIELD(skewInherit);
+#if PG_VERSION_NUM < 100000
 	WRITE_OID_FIELD(skewColType);
 	WRITE_INT_FIELD(skewColTypmod);
+#endif
 
 	env.popNode();
 }
@@ -4568,7 +4964,11 @@ outputRangeVar(NodeInfoEnv& env, const RangeVar *node)
 	WRITE_STRING_FIELD(catalogname);
 	WRITE_STRING_FIELD(schemaname);
 	WRITE_STRING_FIELD(relname);
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(inh);
+#else
 	WRITE_ENUM_FIELD(inhOpt, InhOption);
+#endif
 #if PG_VERSION_NUM >= 90100
 	WRITE_CHAR_FIELD(relpersistence);
 #endif
@@ -4577,6 +4977,30 @@ outputRangeVar(NodeInfoEnv& env, const RangeVar *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 100000
+static void
+outputTableFunc(NodeInfoEnv& env, const TableFunc *node)
+{
+	env.pushNode(node, "TableFunc");
+
+	WRITE_NODE_FIELD(ns_uris);
+	WRITE_NODE_FIELD(ns_names);
+	WRITE_NODE_FIELD(docexpr);
+	WRITE_NODE_FIELD(rowexpr);
+	WRITE_NODE_FIELD(colnames);
+	WRITE_NODE_FIELD(coltypes);
+	WRITE_NODE_FIELD(coltypmods);
+	WRITE_NODE_FIELD(colcollations);
+	WRITE_NODE_FIELD(colexprs);
+	WRITE_NODE_FIELD(coldefexprs);
+	WRITE_BITMAPSET_FIELD(notnulls);
+	WRITE_INT_FIELD(ordinalitycol);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();
+}
+#endif
 
 /* static void outputExpr(NodeInfoEnv& env, const Expr *node); */
 static void
@@ -4872,6 +5296,9 @@ outputSubPlan(NodeInfoEnv& env, const SubPlan *node)
 #endif
 	WRITE_BOOL_FIELD(useHashTable);
 	WRITE_BOOL_FIELD(unknownEqFalse);
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(parallel_safe);
+#endif
 	WRITE_NODE_FIELD(setParam);
 	WRITE_NODE_FIELD(parParam);
 	WRITE_NODE_FIELD(args);
@@ -5122,6 +5549,21 @@ outputMinMaxExpr(NodeInfoEnv& env, const MinMaxExpr *node)
 	env.popNode();
 }
 
+#if PG_VERSION_NUM >= 100000
+static void
+outputSQLValueFunction(NodeInfoEnv& env, const SQLValueFunction *node)
+{
+	env.pushNode(node, "SQLValueFunction");
+
+	WRITE_ENUM_FIELD(op, SQLValueFunctionOp);
+	WRITE_OID_FIELD(type);
+	WRITE_INT32_FIELD(typmod);
+	WRITE_LOCATION_FIELD(location);
+
+	env.popNode();	
+}
+#endif
+
 static void
 outputXmlExpr(NodeInfoEnv& env, const XmlExpr *node)
 {
@@ -5317,6 +5759,19 @@ outputOnConflictExpr(NodeInfoEnv& env, const OnConflictExpr *node)
 }
 #endif
 
+#if PG_VERSION_NUM >= 100000
+static void
+outputNextValueExpr(NodeInfoEnv& env, const NextValueExpr *node)
+{
+	env.pushNode(node, "NextValueExpr");
+	
+	WRITE_OID_FIELD(seqid);
+	WRITE_OID_FIELD(typeId);
+
+	env.popNode();
+}
+#endif
+
 static void
 outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 {
@@ -5340,6 +5795,10 @@ outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 	WRITE_NODE_FIELD(finalrowmarks);
 #if PG_VERSION_NUM >= 90100
 	WRITE_NODE_FIELD(resultRelations);
+#endif
+#if PG_VERSION_NUM >= 100000
+	WRITE_NODE_FIELD(nonleafResultRelations);
+	WRITE_NODE_FIELD(rootResultRelations);
 #endif
 	WRITE_NODE_FIELD(relationOids);
 	WRITE_NODE_FIELD(invalItems);
@@ -5621,6 +6080,9 @@ outputQuery(NodeInfoEnv& env, const Query *node)
 #endif
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasWindowFuncs);
+#if PG_VERSION_NUM >= 100000
+	WRITE_BOOL_FIELD(hasTargetSRFs);
+#endif
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_BOOL_FIELD(hasDistinctOn);
 	WRITE_BOOL_FIELD(hasRecursive);
@@ -5635,6 +6097,9 @@ outputQuery(NodeInfoEnv& env, const Query *node)
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(jointree);
 	WRITE_NODE_FIELD(targetList);
+#if PG_VERSION_NUM >= 100000
+	WRITE_ENUM_FIELD(override, OverridingKind);
+#endif
 #if PG_VERSION_NUM >= 90500
 	WRITE_NODE_FIELD(onConflict);
 #endif
@@ -5656,6 +6121,11 @@ outputQuery(NodeInfoEnv& env, const Query *node)
 #endif
 #if PG_VERSION_NUM >= 90400
 	WRITE_NODE_FIELD(withCheckOptions);
+#endif
+
+#if PG_VERSION_NUM >= 100000
+	WRITE_LOCATION_FIELD(stmt_location);
+	WRITE_INT_FIELD(stmt_len);
 #endif
 
 	env.popNode();
@@ -5765,9 +6235,14 @@ outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 #endif
 #endif
 			break;
+#if PG_VERSION_NUM >= 100000
+		case RTE_TABLEFUNC:
+			WRITE_NODE_FIELD(tablefunc);
+			break;
+#endif
 		case RTE_VALUES:
 			WRITE_NODE_FIELD(values_lists);
-#if PG_VERSION_NUM >= 90100
+#if PG_VERSION_NUM >= 90100 && PG_VERSION_NUM < 100000
 			WRITE_NODE_FIELD(values_collations);
 #endif
 			break;
@@ -5775,12 +6250,24 @@ outputRangeTblEntry(NodeInfoEnv& env, const RangeTblEntry *node)
 			WRITE_STRING_FIELD(ctename);
 			WRITE_INDEX_FIELD(ctelevelsup); /* number of query levels up */
 			WRITE_BOOL_FIELD(self_reference);
+#if PG_VERSION_NUM >= 100000
+			WRITE_NODE_FIELD(coltypes);
+			WRITE_NODE_FIELD(coltypmods);
+			WRITE_NODE_FIELD(colcollations);
+			WRITE_STRING_FIELD(enrname);
+			WRITE_FLOAT_FIELD(enrtuples, "%f");
+#else
 			WRITE_NODE_FIELD(ctecoltypes);
 			WRITE_NODE_FIELD(ctecoltypmods);
 #if PG_VERSION_NUM >= 90100
 			WRITE_NODE_FIELD(ctecolcollations);
 #endif
+#endif
 			break;
+#if PG_VERSION_NUM >= 100000
+		case RTE_NAMEDTUPLESTORE:
+			break;
+#endif
 		default:
 			elog(ERROR, "unrecognized RTE kind: %d", (int) node->rtekind);
 			break;

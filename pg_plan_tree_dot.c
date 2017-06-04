@@ -2,7 +2,7 @@
  *
  * pg_plan_tree_dot.c
  *
- * Copyright (c) 2014-2016 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014-2017 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -93,14 +93,19 @@ output_sql_query(const char *sql, const char *filename, bool simplify)
 
 	foreach(lc1, raw_parsetree_list)
 	{
+#if PG_VERSION_NUM >= 100000
+		RawStmt	   *parsetree = lfirst_node(RawStmt, lc1);
+#else
 		Node	   *parsetree = (Node *) lfirst(lc1);
+#endif
 		List	   *stmt_list;
 		ListCell   *lc2;
 
-		stmt_list = pg_analyze_and_rewrite(parsetree,
-										   sql,
-										   NULL,
-										   0);
+#if PG_VERSION_NUM >= 100000
+		stmt_list = pg_analyze_and_rewrite(parsetree, sql, NULL, 0, NULL);
+#else
+		stmt_list = pg_analyze_and_rewrite(parsetree, sql, NULL, 0);
+#endif
 		stmt_list = pg_plan_queries(stmt_list, 0, NULL);
 
 		foreach(lc2, stmt_list)
@@ -115,8 +120,12 @@ output_sql_query(const char *sql, const char *filename, bool simplify)
 				qdesc = CreateQueryDesc((PlannedStmt *) stmt,
 										sql,
 										GetActiveSnapshot(), NULL,
-										dest, NULL, 0);
-				
+										dest, NULL,
+#if PG_VERSION_NUM >= 100000
+										NULL,
+#endif
+										0);
+
 				output_plan_tree("Plan Tree", sql, qdesc->plannedstmt, file, simplify);
 
 				FreeQueryDesc(qdesc);
