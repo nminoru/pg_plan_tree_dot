@@ -629,6 +629,10 @@ public:
 			case EXPR_SUBLINK:
 				append("EXPR_SUBLINK");
 				break;
+#if PG_VERSION_NUM >= 90500
+			case MULTIEXPR_SUBLINK:
+				append("MULTIEXPR_SUBLINK");
+#endif
 			case ARRAY_SUBLINK:
 				append("ARRAY_SUBLINK");
 				break;
