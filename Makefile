@@ -6,6 +6,8 @@ OBJS = pg_plan_tree_dot.o plan_tree_view.o
 EXTENSION = pg_plan_tree_dot
 DATA = pg_plan_tree_dot--1.1.sql pg_plan_tree_dot--1.0--1.1.sql pg_plan_tree_dot--unpackaged--1.0.sql
 
+REGRESS = test-01
+
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)

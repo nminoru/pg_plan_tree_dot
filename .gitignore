@@ -1,3 +1,7 @@
 *.so
 *.o
-.deps
+.deps/
+results/
+regression.out
+regression.diffs
+
