@@ -2,7 +2,7 @@
  *
  * plan_tree_view.cpp
  *
- * Copyright (c) 2014-2017 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014-2019 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -751,11 +751,21 @@ public:
 			case RELOPT_OTHER_MEMBER_REL:
 				append("RELOPT_OTHER_MEMBER_REL");
 				break;
+#if PG_VERSION_NUM >= 110000
+			case RELOPT_OTHER_JOINREL:
+				append("RELOPT_OTHER_JOINREL");
+				break;				
+#endif				
 #if PG_VERSION_NUM >= 90600
 			case RELOPT_UPPER_REL:
 				append("RELOPT_UPPER_REL");
 				break;
 #endif
+#if PG_VERSION_NUM >= 110000
+			case RELOPT_OTHER_UPPER_REL:
+				append("RELOPT_OTHER_UPPER_REL");
+				break;				
+#endif								
 			case RELOPT_DEADREL:
 				append("RELOPT_DEADREL");
 				break;
@@ -1125,6 +1135,45 @@ public:
 		}
 	}
 #endif
+	
+#if PG_VERSION_NUM >= 110000
+	void outputEnum(const char *fldname, InheritanceKind kind)
+	{
+		append("|%s: ", fldname);
+		switch (kind)
+		{
+			case INHKIND_NONE:
+				append("INHKIND_NONE");
+				break;				
+			case INHKIND_INHERITED:
+				append("INHKIND_INHERITED");
+				break;
+			case INHKIND_PARTITIONED:
+				append("INHKIND_PARTITIONED");
+				break;
+			default:
+				append("InheritanceKind(Unknown: %d)", kind);
+				break;
+		}		
+	}
+		
+	void outputEnum(const char *fldname, PartitionPruneCombineOp combineOp)
+	{
+		append("|%s: ", fldname);
+		switch (combineOp)
+		{
+			case PARTPRUNE_COMBINE_UNION:
+				append("PARTPRUNE_COMBINE_UNION");
+				break;
+			case PARTPRUNE_COMBINE_INTERSECT:
+				append("PARTPRUNE_COMBINE_INTERSECT");
+				break;
+			default:
+				append("PartitionPruneCombineOp(Unknown: %d)", combineOp);
+				break;
+		}
+	}	
+#endif
 
 	void outputOidArray(const char *fldname, int size, Oid* oidarray)
 	{
@@ -1271,6 +1320,12 @@ static void   findLimit(NodeInfoEnv& env, const Limit *node);
 static void   findNestLoopParam(NodeInfoEnv& env, const NestLoopParam *node);
 #endif
 static void   findPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node);
+#if PG_VERSION_NUM >= 110000
+static void   findPartitionPruneInfo(NodeInfoEnv& env, const PartitionPruneInfo *node);
+static void   findPartitionedRelPruneInfo(NodeInfoEnv& env, const PartitionedRelPruneInfo *node);
+static void     findPartitionPruneStepOp(NodeInfoEnv& env, const PartitionPruneStepOp *node);
+static void     findPartitionPruneStepCombine(NodeInfoEnv& env, const PartitionPruneStepCombine *node);
+#endif
 static void   findPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node);
 static void   findAlias(NodeInfoEnv& env, const Alias *node);
 static void   findRangeVar(NodeInfoEnv& env, const RangeVar *node);
@@ -1424,6 +1479,12 @@ static void   outputLimit(NodeInfoEnv& env, const Limit *node);
 static void   outputNestLoopParam(NodeInfoEnv& env, const NestLoopParam *node);
 #endif
 static void   outputPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node);
+#if PG_VERSION_NUM >= 110000
+static void   outputPartitionPruneInfo(NodeInfoEnv& env, const PartitionPruneInfo *node);
+static void   outputPartitionedRelPruneInfo(NodeInfoEnv& env, const PartitionedRelPruneInfo *node);
+static void     outputPartitionPruneStepOp(NodeInfoEnv& env, const PartitionPruneStepOp *node);
+static void     outputPartitionPruneStepCombine(NodeInfoEnv& env, const PartitionPruneStepCombine *node);
+#endif
 static void   outputPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node);
 static void   outputAlias(NodeInfoEnv& env, const Alias *node);
 static void   outputRangeVar(NodeInfoEnv& env, const RangeVar *node);
@@ -1747,6 +1808,20 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_PlanRowMark:
 			findPlanRowMark(env, reinterpret_cast<const PlanRowMark*>(obj));
 			break;
+#if PG_VERSION_NUM >= 110000
+		case T_PartitionPruneInfo:
+			findPartitionPruneInfo(env, reinterpret_cast<const PartitionPruneInfo*>(obj));
+			break;			
+		case T_PartitionedRelPruneInfo:
+			findPartitionedRelPruneInfo(env, reinterpret_cast<const PartitionedRelPruneInfo*>(obj));			
+			break;
+		case T_PartitionPruneStepOp:
+			findPartitionPruneStepOp(env, reinterpret_cast<const PartitionPruneStepOp*>(obj));
+			break;
+		case T_PartitionPruneStepCombine:
+			findPartitionPruneStepCombine(env, reinterpret_cast<const PartitionPruneStepCombine*>(obj));
+			break;
+#endif
 		case T_PlanInvalItem:
 			findPlanInvalItem(env, reinterpret_cast<const PlanInvalItem*>(obj));
 			break;
@@ -2186,6 +2261,9 @@ findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	FIND_NODE(rowMarks);
 	FIND_NODE(relationOids);
 	FIND_NODE(invalItems);
+#if PG_VERSION_NUM >= 110000
+	FIND_NODE(utilityStmt);
+#endif
 }
 
 static void
@@ -2245,7 +2323,11 @@ findAppend(NodeInfoEnv& env, const Append *node)
 #if PG_VERSION_NUM >= 100000
 	FIND_NODE(partitioned_rels);
 #endif
+#if PG_VERSION_NUM >= 110000
+	FIND_NODE(part_prune_info);
+#else
 	FIND_NODE(appendplans);
+#endif
 }
 
 #if PG_VERSION_NUM >= 90100
@@ -2567,6 +2649,33 @@ findPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node)
 	/* nothing */
 }
 
+#if PG_VERSION_NUM >= 110000
+static void
+findPartitionPruneInfo(NodeInfoEnv& env, const PartitionPruneInfo *node)
+{
+	FIND_NODE(prune_infos);
+}
+
+static void
+findPartitionedRelPruneInfo(NodeInfoEnv& env, const PartitionedRelPruneInfo *node)
+{
+	FIND_NODE(pruning_steps);
+}
+
+static void
+findPartitionPruneStepOp(NodeInfoEnv& env, const PartitionPruneStepOp *node)
+{
+	FIND_NODE(exprs);
+	FIND_NODE(cmpfns);
+}
+
+static void
+findPartitionPruneStepCombine(NodeInfoEnv& env, const PartitionPruneStepCombine *node)
+{
+	/* nothing */	
+}
+#endif
+
 static void
 findPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node)
 {
@@ -2766,6 +2875,10 @@ static void
 findArrayCoerceExpr(NodeInfoEnv& env, const ArrayCoerceExpr *node)
 {
 	FIND_NODE(arg);
+	
+#if PG_VERSION_NUM >= 110000
+	FIND_NODE(elemexpr);
+#endif
 }
 
 static void
@@ -3594,6 +3707,20 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_PlanRowMark:
 			outputPlanRowMark(env, reinterpret_cast<const PlanRowMark*>(obj));
 			break;
+#if PG_VERSION_NUM >= 110000
+		case T_PartitionPruneInfo:
+			outputPartitionPruneInfo(env, reinterpret_cast<const PartitionPruneInfo*>(obj));
+			break;			
+		case T_PartitionedRelPruneInfo:
+			outputPartitionedRelPruneInfo(env, reinterpret_cast<const PartitionedRelPruneInfo*>(obj));			
+			break;
+		case T_PartitionPruneStepOp:
+			outputPartitionPruneStepOp(env, reinterpret_cast<const PartitionPruneStepOp*>(obj));
+			break;			
+		case T_PartitionPruneStepCombine:
+			outputPartitionPruneStepCombine(env, reinterpret_cast<const PartitionPruneStepCombine*>(obj));
+			break;
+#endif			
 		case T_PlanInvalItem:
 			outputPlanInvalItem(env, reinterpret_cast<const PlanInvalItem*>(obj));
 			break;
@@ -4148,6 +4275,9 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	WRITE_BOOL_FIELD(dependsOnRole);
 	WRITE_BOOL_FIELD(parallelModeNeeded);
 #endif
+#if PG_VERSION_NUM >= 110000
+	WRITE_INT_FIELD(jitFlags);
+#endif
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(resultRelations);
@@ -4165,9 +4295,14 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_NODE_FIELD(relationOids);
 	WRITE_NODE_FIELD(invalItems);
+#if PG_VERSION_NUM >= 110000
+	WRITE_NODE_FIELD(paramExecTypes);
+	WRITE_NODE_FIELD(utilityStmt);
+#else
 	WRITE_INT_FIELD(nParamExec);
 #if PG_VERSION_NUM < 90600 && PG_VERSION_NUM >= 90500
 	WRITE_BOOL_FIELD(hasRowSecurity);
+#endif
 #endif
 
 #if PG_VERSION_NUM >= 100000
@@ -4264,10 +4399,17 @@ outputAppend(NodeInfoEnv& env, const Append *node)
 	env.pushNode(node, "Append");
 
 	_outputPlan(env, &node->plan);
+#if PG_VERSION_NUM >= 110000
+	WRITE_INT_FIELD(first_partial_plan);
+#endif
 #if PG_VERSION_NUM >= 100000
 	WRITE_NODE_FIELD(partitioned_rels);
 #endif
-	WRITE_NODE_FIELD(appendplans);
+#if PG_VERSION_NUM >= 110000
+	WRITE_NODE_FIELD(part_prune_info);
+#else
+	WRITE_NODE_FIELD(appendplans);	
+#endif	
 
 	env.popNode();
 }
@@ -4757,6 +4899,13 @@ outputWindowAgg(NodeInfoEnv& env, const WindowAgg *node)
 	WRITE_INT_FIELD(frameOptions);
 	WRITE_NODE_FIELD(startOffset);
 	WRITE_NODE_FIELD(endOffset);
+#if PG_VERSION_NUM >= 110000
+	WRITE_OID_FIELD(startInRangeFunc);
+	WRITE_OID_FIELD(endInRangeFunc);
+	WRITE_OID_FIELD(inRangeColl);
+	WRITE_BOOL_FIELD(inRangeAsc);
+	WRITE_BOOL_FIELD(inRangeNullsFirst);
+#endif
 
 	env.popNode();
 }
@@ -4785,6 +4934,9 @@ outputGather(NodeInfoEnv& env, const Gather *node)
 	_outputPlan(env, &node->plan);
 
 	WRITE_INT_FIELD(num_workers);
+#if PG_VERSION_NUM >= 100000
+	WRITE_INT_FIELD(rescan_param);
+#endif
 	WRITE_BOOL_FIELD(single_copy);
 	WRITE_BOOL_FIELD(invisible);
 
@@ -4801,11 +4953,19 @@ outputGatherMerge(NodeInfoEnv& env, const GatherMerge *node)
 	_outputPlan(env, &node->plan);
 
 	WRITE_INT_FIELD(num_workers);
-
+#if PG_VERSION_NUM >= 100000
+	WRITE_INT_FIELD(rescan_param);
+	WRITE_INT_FIELD(numCols);
+#endif
+	
 	env.outputAttrNumberArray("sortColIdx", node->numCols, node->sortColIdx);
 	env.outputOidArray("sortOperators", node->numCols, node->sortOperators);
 	env.outputOidArray("collations", node->numCols, node->collations);
 	env.outputBoolArray("nullsFirst", node->numCols, node->nullsFirst);
+
+#if PG_VERSION_NUM >= 110000
+	WRITE_BITMAPSET_FIELD(initParam);
+#endif
 
 	env.popNode();
 }
@@ -4825,6 +4985,9 @@ outputHash(NodeInfoEnv& env, const Hash *node)
 	WRITE_OID_FIELD(skewColType);
 	WRITE_INT_FIELD(skewColTypmod);
 #endif
+#if PG_VERSION_NUM >= 110000
+	WRITE_FLOAT_FIELD(rows_total, "%f");
+#endif	
 
 	env.popNode();
 }
@@ -4909,6 +5072,74 @@ outputPlanRowMark(NodeInfoEnv& env, const PlanRowMark *node)
 
 	env.popNode();
 }
+
+#if PG_VERSION_NUM >= 110000
+static void
+outputPartitionPruneInfo(NodeInfoEnv& env, const PartitionPruneInfo *node)
+{
+	env.pushNode(node, "PartitionPruneInfo");
+
+	WRITE_NODE_FIELD(prune_infos);
+	WRITE_BITMAPSET_FIELD(other_subplans);
+	
+	env.popNode();
+}
+
+static void
+outputPartitionedRelPruneInfo(NodeInfoEnv& env, const PartitionedRelPruneInfo *node)
+{
+	env.pushNode(node, "PartitionedRelPruneInfo");
+	
+	WRITE_OID_FIELD(reloid);
+	WRITE_NODE_FIELD(pruning_steps);
+	WRITE_BITMAPSET_FIELD(present_parts);
+	WRITE_INT_FIELD(nparts);
+	WRITE_INT_FIELD(nexprs);
+	env.outputIntArray("subplan_map", node->nparts, node->subplan_map);
+	env.outputIntArray("subpart_map", node->nparts, node->subpart_map);
+	if (node->hasexecparam)
+		env.outputBool("hasexecparam", *node->hasexecparam);
+	WRITE_BOOL_FIELD(do_initial_prune);
+	WRITE_BOOL_FIELD(do_exec_prune);
+	WRITE_BITMAPSET_FIELD(execparamids);
+		
+	env.popNode();
+}
+
+static void
+_outputPartitionPruneStep(NodeInfoEnv& env, const PartitionPruneStep *node)
+{
+	WRITE_INT_FIELD(step_id);	
+}
+
+static void
+outputPartitionPruneStepOp(NodeInfoEnv& env, const PartitionPruneStepOp *node)
+{
+	env.pushNode(node, "PartitionPruneStepOp");
+
+	_outputPartitionPruneStep(env, &node->step);
+
+	WRITE_UINT_FIELD(opstrategy);
+	WRITE_NODE_FIELD(exprs);
+	WRITE_NODE_FIELD(cmpfns);
+	WRITE_BITMAPSET_FIELD(nullkeys);
+	
+	env.popNode();
+}
+
+static void
+outputPartitionPruneStepCombine(NodeInfoEnv& env, const PartitionPruneStepCombine *node)
+{
+	env.pushNode(node, "PartitionPruneStepCombine");
+
+	_outputPartitionPruneStep(env, &node->step);
+
+	WRITE_ENUM_FIELD(combineOp, PartitionPruneCombineOp);
+	WRITE_NODE_FIELD(source_stepids);
+	
+	env.popNode();
+}
+#endif
 
 static void
 outputPlanInvalItem(NodeInfoEnv& env, const PlanInvalItem *node)
@@ -5086,6 +5317,9 @@ outputAggref(NodeInfoEnv& env, const Aggref *node)
 #endif
 #if PG_VERSION_NUM >= 90600
 	WRITE_OID_FIELD(aggtranstype);
+#endif
+#if PG_VERSION_NUM >= 90600	
+	WRITE_NODE_FIELD(aggargtypes);
 #endif
 #if PG_VERSION_NUM >= 90400
 	WRITE_NODE_FIELD(aggdirectargs);
@@ -5386,13 +5620,19 @@ outputArrayCoerceExpr(NodeInfoEnv& env, const ArrayCoerceExpr *node)
 	env.pushNode(node, "ArrayCoerceExpr");
 
 	WRITE_NODE_FIELD(arg);
+#if PG_VERSION_NUM >= 110000
+	WRITE_NODE_FIELD(elemexpr);
+#else	
 	WRITE_OID_FIELD(elemfuncid);
+#endif	
 	WRITE_OID_FIELD(resulttype);
 	WRITE_INT32_FIELD(resulttypmod);
 #if PG_VERSION_NUM >= 90100
 	WRITE_OID_FIELD(resultcollid);
 #endif
+#if PG_VERSION_NUM < 110000	
 	WRITE_BOOL_FIELD(isExplicit);
+#endif
 	WRITE_ENUM_FIELD(coerceformat, CoercionForm);
 	WRITE_LOCATION_FIELD(location);
 
@@ -5802,7 +6042,11 @@ outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 #endif
 	WRITE_NODE_FIELD(relationOids);
 	WRITE_NODE_FIELD(invalItems);
+#if PG_VERSION_NUM >= 110000
+	WRITE_NODE_FIELD(paramExecTypes);
+#else	
 	WRITE_INT_FIELD(nParamExec);
+#endif
 	WRITE_INDEX_FIELD(lastPHId);
 	WRITE_INDEX_FIELD(lastRowMarkId);
 #if PG_VERSION_NUM >= 90600
@@ -5814,6 +6058,10 @@ outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 	WRITE_BOOL_FIELD(dependsOnRole);
 	WRITE_BOOL_FIELD(parallelModeOK);
 	WRITE_BOOL_FIELD(parallelModeNeeded);
+#endif
+
+#if PG_VERSION_NUM >= 110000
+	WRITE_CHAR_FIELD(maxParallelHazard);
 #endif
 	
 	env.popNode();
@@ -5919,7 +6167,14 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 #if PG_VERSION_NUM >= 90100
 	WRITE_FLOAT_FIELD(limit_tuples, "%f");
 #endif
+#if PG_VERSION_NUM >= 100000
+	WRITE_INDEX_FIELD(qual_security_level);
+#endif
+#if PG_VERSION_NUM >= 110000
+	WRITE_ENUM_FIELD(inhTargetKind, InheritanceKind);
+#else
 	WRITE_BOOL_FIELD(hasInheritedTarget);
+#endif
 	WRITE_BOOL_FIELD(hasJoinRTEs);
 #if PG_VERSION_NUM >= 90300
 	WRITE_BOOL_FIELD(hasLateralRTEs);
@@ -5944,6 +6199,10 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 
 	/* @todo void * join_search_private */
 	WRITE_POINTER_FIELD(join_search_private);
+
+#if PG_VERSION_NUM >= 110000
+	WRITE_BOOL_FIELD(partColsUpdated);
+#endif
 
 	env.popNode();
 }
