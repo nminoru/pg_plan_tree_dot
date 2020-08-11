@@ -2,7 +2,7 @@
  *
  * plan_tree_view.cpp
  *
- * Copyright (c) 2014-2019 Minoru NAKAMURA <nminoru@nminoru.jp>
+ * Copyright (c) 2014-2020 Minoru NAKAMURA <nminoru@nminoru.jp>
  *
  *-------------------------------------------------------------------------
  */
@@ -35,6 +35,7 @@ extern "C" {
 };
 
 #include <stdarg.h>
+#include <inttypes.h>
 #include <map>
 #include <set>
 #include <string>
@@ -52,6 +53,9 @@ extern "C" {
 #define FIND_PLAN(fldname) \
 	do {findNode(env, node, #fldname, node->fldname);} while (0)
 
+#define FIND_OIDLIST(fldname) \
+	do {env.registerExprTree(node->fldname); findNode(env, node, #fldname, node->fldname);} while (0)
+
 #define FIND_EXPRLIST(fldname) \
 	do {env.registerExprTree(node->fldname); findNode(env, node, #fldname, node->fldname);} while (0)
 
@@ -62,15 +66,21 @@ extern "C" {
 #define WRITE_INT_FIELD(fldname) \
 	do {env.outputInt(#fldname, node->fldname);} while (0)
 
-#define WRITE_INT32_FIELD(fldname) \
-	do {env.outputInt(#fldname, node->fldname);} while (0)
-
 /* Write an unsigned integer field (anything written as ":fldname %u") */
 #define WRITE_UINT_FIELD(fldname) \
 	do {env.outputUint(#fldname, node->fldname);} while (0)
 
+#define WRITE_INT16_FIELD(fldname) \
+	do {env.outputInt16(#fldname, node->fldname);} while (0)
+ 
+#define WRITE_INT32_FIELD(fldname) \
+	do {env.outputInt32(#fldname, node->fldname);} while (0)
+
 #define WRITE_UINT32_FIELD(fldname) \
 	do {env.outputUint32(#fldname, node->fldname);} while (0)
+
+#define WRITE_UINT64_FIELD(fldname) \
+	do {env.outputUint64(#fldname, node->fldname);} while (0)
 
 #define WRITE_ATTRNUMBER_FIELD(fldname) \
 	do {env.outputAttrNumber(#fldname, node->fldname);} while (0)
@@ -232,10 +242,35 @@ public:
 		append("|%s: %u", fldname, value);
 	}
 
-	void outputUint32(const char *fldname, int32 value)
+	void outputInt16(const char *fldname, int16 value)
+	{
+		append("|%s: %u", fldname, value);
+	}	
+
+	void outputUint16(const char *fldname, uint16 value)
+	{
+		append("|%s: %u", fldname, value);
+	}	
+
+	void outputInt32(const char *fldname, int32 value)
+	{
+		append("|%s: %u", fldname, value);
+	}	
+
+	void outputUint32(const char *fldname, uint32 value)
 	{
 		append("|%s: %u", fldname, value);
 	}
+	
+	void outputInt64(const char *fldname, int64 value)
+	{
+		append("|%s: %" PRIi64, fldname, value);
+	}	
+
+	void outputUint64(const char *fldname, uint64 value)
+	{
+		append("|%s: %" PRIu64, fldname, value);
+	}	
 
 	void outputAttrNumber(const char *fldname, AttrNumber value)
 	{
@@ -1342,7 +1377,11 @@ static void   findAggref(NodeInfoEnv& env, const Aggref *node);
 static void   findGroupingFunc(NodeInfoEnv& env, const GroupingFunc *node);
 #endif
 static void   findWindowFunc(NodeInfoEnv& env, const WindowFunc *node);
+#if PG_VERSION_NUM >= 120000
+static void   findSubscriptingRef(NodeInfoEnv& env, const SubscriptingRef *node);
+#else
 static void   findArrayRef(NodeInfoEnv& env, const ArrayRef *node);
+#endif
 static void   findFuncExpr(NodeInfoEnv& env, const FuncExpr *node);
 static void   findNamedArgExpr(NodeInfoEnv& env, const NamedArgExpr *node);
 static void   findOpExpr(NodeInfoEnv& env, const OpExpr *node);
@@ -1501,7 +1540,11 @@ static void   outputAggref(NodeInfoEnv& env, const Aggref *node);
 static void   outputGroupingFunc(NodeInfoEnv& env, const GroupingFunc *node);
 #endif
 static void   outputWindowFunc(NodeInfoEnv& env, const WindowFunc *node);
+#if PG_VERSION_NUM >= 120000
+static void   outputSubscriptingRef(NodeInfoEnv& env, const SubscriptingRef *node);
+#else
 static void   outputArrayRef(NodeInfoEnv& env, const ArrayRef *node);
+#endif
 static void   outputFuncExpr(NodeInfoEnv& env, const FuncExpr *node);
 static void   outputNamedArgExpr(NodeInfoEnv& env, const NamedArgExpr *node);
 static void   outputOpExpr(NodeInfoEnv& env, const OpExpr *node);
@@ -1860,9 +1903,15 @@ findNode(NodeInfoEnv& env, const void *parent, const char *fldname, const void *
 		case T_WindowFunc:
 			findWindowFunc(env, reinterpret_cast<const WindowFunc*>(obj));
 			break;
+#if PG_VERSION_NUM >= 120000
+		case T_SubscriptingRef:
+			findSubscriptingRef(env, reinterpret_cast<const SubscriptingRef*>(obj));
+			break;			
+#else
 		case T_ArrayRef:
 			findArrayRef(env, reinterpret_cast<const ArrayRef*>(obj));
 			break;
+#endif
 		case T_FuncExpr:
 			findFuncExpr(env, reinterpret_cast<const FuncExpr*>(obj));
 			break;
@@ -2248,7 +2297,9 @@ findPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	FIND_NODE(planTree);
 	FIND_NODE(rtable);
 	FIND_NODE(resultRelations);
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM >= 120000
+	FIND_NODE(rootResultRelations);	
+#elif PG_VERSION_NUM >= 100000
 	FIND_NODE(nonleafResultRelations);
 	FIND_NODE(rootResultRelations);
 #else
@@ -2295,7 +2346,7 @@ static void
 findModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 {
 	findPlan(env, &node->plan);
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM < 120000 && PG_VERSION_NUM >= 100000
 	FIND_NODE(partitioned_rels);
 #endif
 	FIND_NODE(resultRelations);
@@ -2320,13 +2371,12 @@ static void
 findAppend(NodeInfoEnv& env, const Append *node)
 {
 	findPlan(env, &node->plan);
-#if PG_VERSION_NUM >= 100000
+	FIND_NODE(appendplans);	
+#if PG_VERSION_NUM < 120000 && PG_VERSION_NUM >= 100000
 	FIND_NODE(partitioned_rels);
 #endif
 #if PG_VERSION_NUM >= 110000
 	FIND_NODE(part_prune_info);
-#else
-	FIND_NODE(appendplans);
 #endif
 }
 
@@ -2335,10 +2385,13 @@ static void
 findMergeAppend(NodeInfoEnv& env, const MergeAppend *node)
 {
 	findPlan(env, &node->plan);
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM < 120000 && PG_VERSION_NUM >= 100000
 	FIND_NODE(partitioned_rels);
 #endif
 	FIND_NODE(mergeplans); /* list of plans */
+#if PG_VERSION_NUM >= 120000
+	FIND_NODE(part_prune_info);
+#endif			
 }
 #endif
 
@@ -2548,6 +2601,11 @@ findHashJoin(NodeInfoEnv& env, const HashJoin *node)
 {
 	findJoin(env, &node->join);
 	FIND_EXPRLIST(hashclauses);
+#if PG_VERSION_NUM >= 120000
+	FIND_OIDLIST(hashoperators);
+	FIND_OIDLIST(hashcollations);
+	FIND_EXPRLIST(hashkeys);
+#endif	
 }
 
 static void
@@ -2612,6 +2670,10 @@ static void
 findHash(NodeInfoEnv& env, const Hash *node)
 {
 	findPlan(env, &node->plan);
+
+#if PG_VERSION_NUM >= 120000
+	FIND_EXPRLIST(hashkeys);
+#endif		
 }
 
 static void
@@ -2659,7 +2721,15 @@ findPartitionPruneInfo(NodeInfoEnv& env, const PartitionPruneInfo *node)
 static void
 findPartitionedRelPruneInfo(NodeInfoEnv& env, const PartitionedRelPruneInfo *node)
 {
+#if PG_VERSION_NUM >= 120000
+#else
 	FIND_NODE(pruning_steps);
+#endif
+
+#if PG_VERSION_NUM >= 120000
+	FIND_NODE(initial_pruning_steps);
+	FIND_NODE(exec_pruning_steps);
+#endif
 }
 
 static void
@@ -2770,6 +2840,19 @@ findWindowFunc(NodeInfoEnv& env, const WindowFunc *node)
 	FIND_NODE(args);
 }
 
+#if PG_VERSION_NUM >= 120000
+
+static void
+findSubscriptingRef(NodeInfoEnv& env, const SubscriptingRef *node)
+{
+	FIND_NODE(refupperindexpr);
+	FIND_NODE(reflowerindexpr);
+	FIND_NODE(refexpr);
+	FIND_NODE(refassgnexpr);
+}
+
+#else
+
 static void
 findArrayRef(NodeInfoEnv& env, const ArrayRef *node)
 {
@@ -2778,6 +2861,8 @@ findArrayRef(NodeInfoEnv& env, const ArrayRef *node)
 	FIND_NODE(refexpr);
 	FIND_NODE(refassgnexpr);
 }
+
+#endif
 
 static void
 findFuncExpr(NodeInfoEnv& env, const FuncExpr *node)
@@ -3138,9 +3223,6 @@ findPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	FIND_NODE(sort_pathkeys);
 #if PG_VERSION_NUM >= 90100
 	FIND_NODE(minmax_aggs);
-#endif
-#if PG_VERSION_NUM >= 90500
-	FIND_NODE(grouping_map);
 #endif
 	FIND_NODE(initial_rels);
 
@@ -3758,9 +3840,15 @@ outputNode(NodeInfoEnv& env, const void *obj)
 		case T_WindowFunc:
 			outputWindowFunc(env, reinterpret_cast<const WindowFunc*>(obj));
 			break;
+#if PG_VERSION_NUM >= 120000
+		case T_SubscriptingRef:
+			outputSubscriptingRef(env, reinterpret_cast<const SubscriptingRef*>(obj));
+			break;			
+#else
 		case T_ArrayRef:
 			outputArrayRef(env, reinterpret_cast<const ArrayRef*>(obj));
 			break;
+#endif
 		case T_FuncExpr:
 			outputFuncExpr(env, reinterpret_cast<const FuncExpr*>(obj));
 			break;
@@ -4262,8 +4350,10 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	env.pushNode(node, "PlannedStmt");
 
 	WRITE_ENUM_FIELD(commandType, CmdType);
-#if PG_VERSION_NUM >= 90200
-	WRITE_UINT_FIELD(queryId);
+#if PG_VERSION_NUM >= 110000
+	WRITE_UINT64_FIELD(queryId);	
+#elif PG_VERSION_NUM >= 90200
+	WRITE_UINT32_FIELD(queryId);
 #endif
 	WRITE_BOOL_FIELD(hasReturning);
 #if PG_VERSION_NUM >= 90100
@@ -4281,7 +4371,9 @@ outputPlannedStmt(NodeInfoEnv& env, const PlannedStmt *node)
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(resultRelations);
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM >= 120000
+	WRITE_NODE_FIELD(rootResultRelations);	
+#elif PG_VERSION_NUM >= 100000
 	WRITE_NODE_FIELD(nonleafResultRelations);
 	WRITE_NODE_FIELD(rootResultRelations);
 #else
@@ -4358,8 +4450,14 @@ outputModifyTable(NodeInfoEnv& env, const ModifyTable *node)
 #if PG_VERSION_NUM >= 90500
 	WRITE_INDEX_FIELD(nominalRelation);
 #endif
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM >= 120000
+	WRITE_INDEX_FIELD(rootRelation);
+#endif
+#if PG_VERSION_NUM < 120000 && PG_VERSION_NUM >= 100000
 	WRITE_NODE_FIELD(partitioned_rels);
+#endif
+#if PG_VERSION_NUM >= 110000
+	WRITE_BOOL_FIELD(partColsUpdated);
 #endif
 	WRITE_NODE_FIELD(resultRelations);
 #if PG_VERSION_NUM >= 90100
@@ -4399,16 +4497,17 @@ outputAppend(NodeInfoEnv& env, const Append *node)
 	env.pushNode(node, "Append");
 
 	_outputPlan(env, &node->plan);
+	
+	WRITE_NODE_FIELD(appendplans);
+	
 #if PG_VERSION_NUM >= 110000
 	WRITE_INT_FIELD(first_partial_plan);
 #endif
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM < 120000 && PG_VERSION_NUM >= 100000
 	WRITE_NODE_FIELD(partitioned_rels);
 #endif
 #if PG_VERSION_NUM >= 110000
 	WRITE_NODE_FIELD(part_prune_info);
-#else
-	WRITE_NODE_FIELD(appendplans);	
 #endif	
 
 	env.popNode();
@@ -4421,7 +4520,7 @@ outputMergeAppend(NodeInfoEnv& env, const MergeAppend *node)
 	env.pushNode(node, "MergeAppend");
 
 	_outputPlan(env, &node->plan);
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM < 120000 && PG_VERSION_NUM >= 100000
 	WRITE_NODE_FIELD(partitioned_rels);
 #endif
 	WRITE_NODE_FIELD(mergeplans);
@@ -4430,6 +4529,10 @@ outputMergeAppend(NodeInfoEnv& env, const MergeAppend *node)
 	env.outputOidArray("sortOperators", node->numCols, node->sortOperators);
 	env.outputOidArray("collations", node->numCols, node->collations);
 	env.outputBoolArray("nullsFirst", node->numCols, node->nullsFirst);
+	
+#if PG_VERSION_NUM >= 120000
+	WRITE_NODE_FIELD(part_prune_info);
+#endif		
 
 	env.popNode();
 }
@@ -4445,6 +4548,9 @@ outputRecursiveUnion(NodeInfoEnv& env, const RecursiveUnion *node)
 	WRITE_INT_FIELD(numCols);
 	env.outputAttrNumberArray("dupColIdx", node->numCols, node->dupColIdx);
 	env.outputOidArray("dupOperators", node->numCols, node->dupOperators);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("dupCollations", node->numCols, node->dupCollations);
+#endif
 	WRITE_LONG_FIELD(numGroups);
 
 	env.popNode();
@@ -4800,6 +4906,11 @@ outputHashJoin(NodeInfoEnv& env, const HashJoin *node)
 	_outputJoin(env, &node->join);
 
 	WRITE_NODE_FIELD(hashclauses);
+#if PG_VERSION_NUM >= 120000
+	WRITE_NODE_FIELD(hashoperators);
+	WRITE_NODE_FIELD(hashcollations);
+	WRITE_NODE_FIELD(hashkeys);
+#endif
 
 	env.popNode();
 }
@@ -4844,6 +4955,9 @@ outputGroup(NodeInfoEnv& env, const Group *node)
 
 	env.outputAttrNumberArray("grpColIdx", node->numCols, node->grpColIdx);
 	env.outputOidArray("grpOperators", node->numCols, node->grpOperators);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("grpCollations", node->numCols, node->grpCollations);
+#endif
 
 	env.popNode();
 }
@@ -4863,6 +4977,9 @@ outputAgg(NodeInfoEnv& env, const Agg *node)
 
 	env.outputAttrNumberArray("grpColIdx", node->numCols, node->grpColIdx);
 	env.outputOidArray("grpOperators", node->numCols, node->grpOperators);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("grpCollations", node->numCols, node->grpCollations);
+#endif	
 
 	WRITE_LONG_FIELD(numGroups);
 
@@ -4890,11 +5007,17 @@ outputWindowAgg(NodeInfoEnv& env, const WindowAgg *node)
 
 	env.outputAttrNumberArray("partColIdx", node->partNumCols, node->partColIdx);
 	env.outputOidArray("partOperators", node->partNumCols, node->partOperators);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("partCollations", node->partNumCols, node->partCollations);
+#endif		
 
 	WRITE_INT_FIELD(ordNumCols);
 
 	env.outputAttrNumberArray("ordColIdx", node->ordNumCols, node->ordColIdx);
 	env.outputOidArray("ordOperators", node->ordNumCols, node->ordOperators);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("ordCollations", node->ordNumCols, node->ordCollations);
+#endif			
 
 	WRITE_INT_FIELD(frameOptions);
 	WRITE_NODE_FIELD(startOffset);
@@ -4921,6 +5044,9 @@ outputUnique(NodeInfoEnv& env, const Unique *node)
 
 	env.outputAttrNumberArray("uniqColIdx", node->numCols, node->uniqColIdx);
 	env.outputOidArray("uniqOperators", node->numCols, node->uniqOperators);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("uniqCollations", node->numCols, node->uniqCollations);
+#endif				
 
 	env.popNode();
 }
@@ -4939,6 +5065,9 @@ outputGather(NodeInfoEnv& env, const Gather *node)
 #endif
 	WRITE_BOOL_FIELD(single_copy);
 	WRITE_BOOL_FIELD(invisible);
+#if PG_VERSION_NUM >= 110000	
+	WRITE_BITMAPSET_FIELD(initParam);
+#endif	
 
 	env.popNode();
 }
@@ -4978,6 +5107,9 @@ outputHash(NodeInfoEnv& env, const Hash *node)
 
 	_outputPlan(env, &node->plan);
 
+#if PG_VERSION_NUM >= 120000
+	WRITE_NODE_FIELD(hashkeys);
+#endif
 	WRITE_OID_FIELD(skewTable);
 	WRITE_ATTRNUMBER_FIELD(skewColumn);
 	WRITE_BOOL_FIELD(skewInherit);
@@ -5005,6 +5137,9 @@ outputSetOp(NodeInfoEnv& env, const SetOp *node)
 
 	env.outputAttrNumberArray("dupColIdx", node->numCols, node->dupColIdx);
 	env.outputOidArray("dupOperators", node->numCols, node->dupOperators);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("dupCollations", node->numCols, node->dupCollations);
+#endif
 
 	WRITE_ATTRNUMBER_FIELD(flagColIdx);
 	WRITE_INT_FIELD(firstFlag);
@@ -5089,18 +5224,34 @@ static void
 outputPartitionedRelPruneInfo(NodeInfoEnv& env, const PartitionedRelPruneInfo *node)
 {
 	env.pushNode(node, "PartitionedRelPruneInfo");
-	
+
+#if PG_VERSION_NUM >= 120000
+	WRITE_INDEX_FIELD(rtindex);
+#else
 	WRITE_OID_FIELD(reloid);
 	WRITE_NODE_FIELD(pruning_steps);
+#endif
 	WRITE_BITMAPSET_FIELD(present_parts);
 	WRITE_INT_FIELD(nparts);
+#if PG_VERSION_NUM >= 120000
+#else
 	WRITE_INT_FIELD(nexprs);
+#endif
 	env.outputIntArray("subplan_map", node->nparts, node->subplan_map);
 	env.outputIntArray("subpart_map", node->nparts, node->subpart_map);
+#if PG_VERSION_NUM >= 120000
+	env.outputOidArray("relid_map", node->nparts, node->relid_map);
+#else
 	if (node->hasexecparam)
 		env.outputBool("hasexecparam", *node->hasexecparam);
+#endif
+#if PG_VERSION_NUM >= 120000
+	WRITE_NODE_FIELD(initial_pruning_steps);
+	WRITE_NODE_FIELD(exec_pruning_steps);
+#else
 	WRITE_BOOL_FIELD(do_initial_prune);
-	WRITE_BOOL_FIELD(do_exec_prune);
+	WRITE_BOOL_FIELD(do_exec_prune);	
+#endif
 	WRITE_BITMAPSET_FIELD(execparamids);
 		
 	env.popNode();
@@ -5383,6 +5534,27 @@ outputWindowFunc(NodeInfoEnv& env, const WindowFunc *node)
 	env.popNode();
 }
 
+#if PG_VERSION_NUM >= 120000
+
+static void
+outputSubscriptingRef(NodeInfoEnv& env, const SubscriptingRef *node)
+{
+	env.pushNode(node, "SubscriptingRef");
+
+	WRITE_OID_FIELD(refcontainertype);
+	WRITE_OID_FIELD(refelemtype);
+	WRITE_INT32_FIELD(reftypmod);
+	WRITE_OID_FIELD(refcollid);
+	WRITE_NODE_FIELD(refupperindexpr);
+	WRITE_NODE_FIELD(reflowerindexpr);
+	WRITE_NODE_FIELD(refexpr);
+	WRITE_NODE_FIELD(refassgnexpr);
+
+	env.popNode();
+}
+
+#else
+
 static void
 outputArrayRef(NodeInfoEnv& env, const ArrayRef *node)
 {
@@ -5401,6 +5573,8 @@ outputArrayRef(NodeInfoEnv& env, const ArrayRef *node)
 
 	env.popNode();
 }
+
+#endif
 
 static void
 outputFuncExpr(NodeInfoEnv& env, const FuncExpr *node)
@@ -6036,7 +6210,9 @@ outputPlannerGlobal(NodeInfoEnv& env, const PlannerGlobal *node)
 #if PG_VERSION_NUM >= 90100
 	WRITE_NODE_FIELD(resultRelations);
 #endif
-#if PG_VERSION_NUM >= 100000
+#if PG_VERSION_NUM >= 120000
+	WRITE_NODE_FIELD(rootResultRelations);	
+#elif PG_VERSION_NUM >= 100000
 	WRITE_NODE_FIELD(nonleafResultRelations);
 	WRITE_NODE_FIELD(rootResultRelations);
 #endif
@@ -6086,11 +6262,16 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 
 	WRITE_INT_FIELD(simple_rel_array_size);
 
-	for (i=1 ; i<node->simple_rel_array_size ; i++)
+	for (i=1 ; i < node->simple_rel_array_size ; i++)
 		WRITE_NODE_INDEX_FIELD(simple_rel_array, i);
 
-	for (i=1 ; i<node->simple_rel_array_size ; i++)
+	for (i=1 ; i < node->simple_rel_array_size ; i++)
 		WRITE_NODE_INDEX_FIELD(simple_rte_array, i);
+
+#if PG_VERSION_NUM >= 110000	
+	for (i=1 ; i < node->simple_rel_array_size ; i++)
+		WRITE_NODE_INDEX_FIELD(append_rel_array, i);
+#endif
 
 #if PG_VERSION_NUM >= 90200
 	WRITE_BITMAPSET_FIELD(all_baserels);
@@ -6103,7 +6284,7 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 
 	WRITE_INT_FIELD(join_cur_level);
 
-	for (i=0 ; i<node->join_cur_level ; i++)
+	for (i=0 ; i < node->join_cur_level ; i++)
 		WRITE_NODE_INDEX_FIELD(join_rel_level, i);
 
 #if PG_VERSION_NUM < 90100
@@ -6155,9 +6336,10 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 	WRITE_NODE_FIELD(processed_tlist);
 #endif
 
-#if PG_VERSION_NUM >= 90500
-	WRITE_NODE_FIELD(grouping_map);
-#endif
+// #if PG_VERSION_NUM >= 90500
+// WRITE_NODE_FIELD(grouping_map); /* AttrNumber * */
+// #endif
+	
 #if PG_VERSION_NUM >= 90600
 	WRITE_NODE_FIELD(minmax_aggs);
 #endif
@@ -6179,7 +6361,7 @@ outputPlannerInfo(NodeInfoEnv& env, const PlannerInfo *node)
 #if PG_VERSION_NUM >= 90300
 	WRITE_BOOL_FIELD(hasLateralRTEs);
 #endif
-#if PG_VERSION_NUM >= 90500
+#if PG_VERSION_NUM < 120000 && PG_VERSION_NUM >= 90500
 	WRITE_BOOL_FIELD(hasDeletedRTEs);
 #endif
 	WRITE_BOOL_FIELD(hasHavingQual);

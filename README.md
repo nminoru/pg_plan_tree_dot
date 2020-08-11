@@ -16,26 +16,33 @@ Requirements
 
 Tested on:
 
-- PostgreSQL 9.0.23, 9.1.23, 9.2.18, 9.3.14, 9.4.9, 9.5.4, 9.6.3, 10.6, and 11.1 under x86-64 CentOS 7.x
+- PostgreSQL 9.0.23, 9.1.23, 9.2.18, 9.3.14, 9.4.9, 9.5.4, 9.6.18, 10.13, 11.8 and 12.3 under x86-64 CentOS 7.x
 
 Building
 ========
 
 First, acquire the source code by cloning the git repository.
 
-    $ git clone https://github.com/nminoru/pg_plan_tree_dot
+```sh
+git clone https://github.com/nminoru/pg_plan_tree_dot
+```
 
 Next, input the following commadns.
 
-    $ cd pg_plan_tree_dot
-    $ make
-    $ make install
+```sh
+cd pg_plan_tree_dot
+make
+make install
+```
 
 Usage 
 =====
 
-    CREATE EXTENSION pg_plan_tree_dot;
+```
+CREATE EXTENSION pg_plan_tree_dot;
+SELECT generate_plan_tree_dot('sql', 'output.dot');
+```
 
-    SELECT generate_plan_tree_dot('sql', 'output.dot');
-
-    dot -Tpng output.dot -o output.png
+```
+dot -Tpng output.dot -o output.png
+```
